@@ -305,4 +305,13 @@
   (, (run-shallow-abstraction $id) (DEF shallow-abstraction-start $start-p $start-t) (DEF shallow-abstraction-step $step-p $step-t))
   (O (+ (exec (ABS 0 start) $start-p $start-t)) (+ (exec (ABS 1 step) $step-p $step-t))))
 
-
+; Example call, kept inactive:
+(run-shallow-abstraction abs-example)
+(valuation-binding abs-example c1 (root arg/2) (var 0) (Eval Allen soda))
+(valuation-binding abs-example c2 (root arg/2) (var 0) (Eval Allen Allen))
+(valuation-binding abs-example c3 (root arg/1) (var 0) Allen)
+(valuation-binding abs-example c4 (root arg/1) (var 0) (var 1))
+(exec (ABS 0 call-example)
+  (, (run-shallow-abstraction abs-example)
+     (DEF shallow-abstraction-fn $abs-p $abs-t))
+  (O (+ (exec (ABS 0 run-shallow-abstraction) $abs-p $abs-t))))
