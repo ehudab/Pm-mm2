@@ -253,3 +253,24 @@
 ;   (O (+ (exec (VAL 0 run-valuation) $val-p $val-t))))
 
 
+; shallow abstraction for valuation bindings
+;
+; This is intentionally shallow:
+;   - symbols/atoms stay unchanged
+;   - variables stay unchanged
+;   - pair/triplet expressions keep their link unchanged
+;   - only direct arguments are replaced by split variables
+;
+; Example:
+;   (valuation-binding $id $candidate $path (var 0) (Eval Allen soda))
+; becomes:
+;   (shallow-abstraction-binding $id $candidate $path (var 0)
+;      (Eval (var (0 1)) (var (0 2))))
+;
+; Nested expression arguments are treated as one shallow child for now.
+
+(DEF shallow-abstraction-start
+  (, (run-shallow-abstraction $id) (valuation-binding $id $candidate-id $path (var $source-index) $value))
+  (O (pure (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var)
+       $is-var (i8_to_string (is_var (' $value))))))
+
