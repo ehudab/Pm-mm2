@@ -274,3 +274,31 @@
   (O (pure (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var)
        $is-var (i8_to_string (is_var (' $value))))))
 
+(DEF shallow-abstraction-step
+  (, (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var))
+  (O
+    (+ (exec (ABS 2 keep-var)
+         (, (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+         (O (- (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+            (+ (shallow-abstraction-binding $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value)))))
+    (+ (exec (ABS 3 split-pair)
+         (, (shallow-abstraction-request $pair-id $pair-candidate-id $pair-path (var $pair-source-index) ($link $a) 0))
+         (O (- (shallow-abstraction-request $pair-id $pair-candidate-id $pair-path (var $pair-source-index) ($link $a) 0))
+            (+ (shallow-abstraction-binding $pair-id $pair-candidate-id $pair-path (var $pair-source-index)
+                 ($link (var ($pair-source-index 1))))))))
+    (+ (exec (ABS 3 split-triplet-same-args)
+         (, (shallow-abstraction-request $same-id $same-candidate-id $same-path (var $same-source-index) ($link $a $a) 0))
+         (O (- (shallow-abstraction-request $same-id $same-candidate-id $same-path (var $same-source-index) ($link $a $a) 0))
+            (+ (shallow-abstraction-binding $same-id $same-candidate-id $same-path (var $same-source-index)
+                 ($link (var ($same-source-index 1)) (var ($same-source-index 1))))))))
+    (+ (exec (ABS 4 split-triplet)
+         (, (shallow-abstraction-request $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index) ($link $a $b) 0))
+         (O (- (shallow-abstraction-request $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index) ($link $a $b) 0))
+            (+ (shallow-abstraction-binding $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index)
+                 ($link (var ($triplet-source-index 1)) (var ($triplet-source-index 2))))))))
+    (+ (exec (ABS 9 keep-atom)
+         (, (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+         (O (- (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+            (+ (shallow-abstraction-binding $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value)))))))
+
+
