@@ -301,4 +301,8 @@
          (O (- (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
             (+ (shallow-abstraction-binding $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value)))))))
 
+(DEF shallow-abstraction-fn
+  (, (run-shallow-abstraction $id) (DEF shallow-abstraction-start $start-p $start-t) (DEF shallow-abstraction-step $step-p $step-t))
+  (O (+ (exec (ABS 0 start) $start-p $start-t)) (+ (exec (ABS 1 step) $step-p $step-t))))
+
 
