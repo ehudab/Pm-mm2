@@ -248,17 +248,12 @@
 ;; Accept only triplet-format pattern atoms. Each singleton candidate is queued
 ;; so the same support/filter/expand machinery handles level 1 and later levels.
 (exec (CE 0 1)
-    (, (pattern 0 ($predicate $left $right)))
+    (, (pattern 0 $pattern))
     (O
         (pure
-            (ce-base $indexed)
+            (exec (0 0) (,) (O (+ (ce-base $indexed)) (+ (ce-pending 1 ($indexed)))))
             $indexed
-            (vars_to_indices (' ($predicate $left $right)))
-        )
-        (pure
-            (ce-pending 1 ($indexed))
-            $indexed
-            (vars_to_indices (' ($predicate $left $right)))
+            (vars_to_indices (' $pattern))
         )))
 
 ;; Start the first support-count cycle after all bases have been normalized.
