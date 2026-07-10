@@ -25,6 +25,71 @@ Because of this, every data model should answer three questions:
 - What facts does this stage produce?
 - Which produced facts are final, and which are temporary?
 
+## Exec Priority Convention
+
+All project `exec` priorities must use a fixed three-field tuple:
+
+```metta
+(exec ($module $stage $label)
+    $sources
+    $sinks)
+```
+
+The fields are:
+
+| Field | Purpose | Example |
+| --- | --- | --- |
+| `$module` | Namespace for the project module that owns the rule | `surp`, `freq`, `shared`, `debug` |
+| `$stage` | Primary ordering key inside the module; exactly three decimal digits | `010`, `020`, `100`, `900` |
+| `$label` | Human-readable stage name | `init`, `index-pattern`, `cleanup` |
+
+Example:
+
+```metta
+(exec (surp 010 init) ...)
+(exec (surp 020 index-pattern) ...)
+(exec (surp 090 product-2) ...)
+(exec (surp 091 product-3) ...)
+(exec (surp 100 interval) ...)
+(exec (surp 900 cleanup) ...)
+```
+
+Do not use bare natural priorities in project code:
+
+```metta
+;; Avoid
+(exec 10 ...)
+(exec 20 ...)
+```
+
+The `$stage` field must be exactly `three decimal digits`, from `000` through `999`. Use leading zeros when needed. MORK does not treat this field as an arithmetic integer; it orders priority expressions by their encoded path/symbol order. A fixed width of 3 makes that ordering match the numeric order we intend:
+
+```text
+010 < 020 < 090 < 100 < 900
+```
+
+Avoid mixed-width stages:
+
+```metta
+;; Avoid
+(exec (surp 9 product-2) ...)
+(exec (surp 90 product-2) ...)
+(exec (surp 100 interval) ...)
+```
+
+The `$label` field is for readability. It can affect ordering only when `$module` and `$stage` are identical, so never rely on the label for important sequencing. If two rules must run in a specific order, give them different stage numbers:
+
+```metta
+;; Good
+(exec (surp 090 product-2) ...)
+(exec (surp 091 product-3) ...)
+
+;; Avoid when ordering matters
+(exec (surp 090 product-2) ...)
+(exec (surp 090 product-3) ...)
+```
+
+
 ## Fact Categories
 
 Use explicit predicates to make each fact type clear.
@@ -203,6 +268,3 @@ Example:
   (O
     ...))
 ```
-
-Use `DEF` when another rule needs to reuse a source/sink body internally.
-
