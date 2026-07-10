@@ -62,7 +62,6 @@
                     (f64_from_string $count))))))
 
 ;; Distance from an empirical value to an interval [emin, emax].
-;; Cases are materialized as facts so the three execs below stay easy to read.
 ((dst-from-interval $pattern $emin $emax $emp -> $out)
     (, (dst-request $pattern $emin $emax $emp $out))
     (O
@@ -119,6 +118,8 @@
             (partitions-of $indexed-pattern $indexed-partition)
             $indexed-partition
             (partitions (' $indexed-pattern)))))
+
+
 
 (exec 3
     (, (partitions-of $indexed-pattern $indexed-partition)
@@ -361,22 +362,14 @@
     (O
         (- (cleanup $fact))
         (- $fact)
-        (+ (exec 18
-            (, (cleanup $f) $f)
-            (O
-                (- (cleanup $f))
-                (- $f))))))
+        ))
 
 ;; Remove the generic cleanup tasks after they are no longer useful.
 (exec 19
     (, (cleanup $fact))
     (O
         (- (cleanup $fact))
-        (+ (exec 19
-            (, (cleanup $f))
-            (O
-                (- (cleanup $f)))))))
-
+        ))
 
 
 
@@ -390,13 +383,40 @@
 (INPUT DB db)
 (INPUT DB-SIZE 60)
 (INPUT NORMALIZATION TRUE)
-(INPUT PATTERN ((, (Inheritance $x man) (Inheritance $x ugly) (Inheritance $x sodaDrinker)) 5))
+(INPUT PATTERN ((,  (Inheritance $x man) (Inheritance $x ugly) (Inheritance $x sodaDrinker)) 5))
 
 
 
-;; Raw facts used by the dynamic support-count queries.
-(Inheritance Allen human)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (Inheritance Abe human)
+
+
+
 (Inheritance Cason human)
 (Inheritance Davion human)
 (Inheritance Hessley human)
