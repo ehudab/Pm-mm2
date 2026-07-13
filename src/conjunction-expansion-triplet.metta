@@ -182,23 +182,21 @@
         (+ (exec (CE 4 1) $map-build-p $map-build-t))
         (+ (exec (CE 4 1) $output-build-p $output-build-t))))
 
-;; Schedule expansion-pair creation, bounded atom extraction, and base shape
+;; Schedule expansion-pair creation, dynamic atom extraction, and base shape
 ;; classification. Scheduler rules never consume the active todo.
 (DEF ce-schedule-pair-build-fn
     (, (ce-expand-todo $old-size $conjunct)
        (DEF ce-expand-pair-fn $expand-pair-p $expand-pair-t)
-       (DEF ce-expand-pair-details-size-1-fn $pair-details-1-p $pair-details-1-t)
-       (DEF ce-expand-pair-details-size-2-fn $pair-details-2-p $pair-details-2-t)
-       (DEF ce-expand-pair-details-size-3-fn $pair-details-3-p $pair-details-3-t)
+       (DEF ce-expand-pair-details-fn $pair-details-p $pair-details-t)
+       (DEF ce-expand-pair-scan-fn $pair-scan-p $pair-scan-t)
        (DEF ce-conjunct-var-check-fn $conjunct-var-check-p $conjunct-var-check-t)
        (DEF ce-base-shape-fn $base-shape-p $base-shape-t))
     (O
         (+ (exec (CE 4 2) $expand-pair-p $expand-pair-t))
-        (+ (exec (CE 4 3) $pair-details-1-p $pair-details-1-t))
-        (+ (exec (CE 4 3) $pair-details-2-p $pair-details-2-t))
-        (+ (exec (CE 4 3) $pair-details-3-p $pair-details-3-t))
-        (+ (exec (CE 4 4) $conjunct-var-check-p $conjunct-var-check-t))
-        (+ (exec (CE 4 5) $base-shape-p $base-shape-t))))
+        (+ (exec (CE 4 3) $pair-details-p $pair-details-t))
+        (+ (exec (CE 4 4) $pair-scan-p $pair-scan-t))
+        (+ (exec (CE 4 5) $conjunct-var-check-p $conjunct-var-check-t))
+        (+ (exec (CE 4 6) $base-shape-p $base-shape-t))))
 
 ;; Schedule existing/fresh choices and repeated-source classification.
 (DEF ce-schedule-choice-build-fn
@@ -211,13 +209,13 @@
        (DEF ce-base-source-indices-to-i32-fn $source-indices-p $source-indices-t)
        (DEF ce-base-source-relation-fn $source-relation-p $source-relation-t))
     (O
-        (+ (exec (CE 4 6) $existing-choice-p $existing-choice-t))
-        (+ (exec (CE 4 6) $drop-non-var-p $drop-non-var-t))
-        (+ (exec (CE 4 7) $fresh-candidate-p $fresh-candidate-t))
-        (+ (exec (CE 4 8) $drop-existing-fresh-p $drop-existing-fresh-t))
-        (+ (exec (CE 4 9) $save-fresh-choice-p $save-fresh-choice-t))
-        (+ (exec (CE 5 0) $source-indices-p $source-indices-t))
-        (+ (exec (CE 5 1) $source-relation-p $source-relation-t))))
+        (+ (exec (CE 4 7) $existing-choice-p $existing-choice-t))
+        (+ (exec (CE 4 7) $drop-non-var-p $drop-non-var-t))
+        (+ (exec (CE 4 8) $fresh-candidate-p $fresh-candidate-t))
+        (+ (exec (CE 4 9) $drop-existing-fresh-p $drop-existing-fresh-t))
+        (+ (exec (CE 5 0) $save-fresh-choice-p $save-fresh-choice-t))
+        (+ (exec (CE 5 1) $source-indices-p $source-indices-t))
+        (+ (exec (CE 5 2) $source-relation-p $source-relation-t))))
 
 ;; Schedule position mappings and their connectivity classification.
 (DEF ce-schedule-map-build-fn
@@ -230,13 +228,13 @@
        (DEF ce-connect-map-fn $connect-map-p $connect-map-t)
        (DEF ce-drop-disconnected-map-fn $drop-disconnected-map-p $drop-disconnected-map-t))
     (O
-        (+ (exec (CE 5 2) $same-var-map-p $same-var-map-t))
-        (+ (exec (CE 5 2) $distinct-var-map-p $distinct-var-map-t))
-        (+ (exec (CE 5 2) $left-var-map-p $left-var-map-t))
-        (+ (exec (CE 5 2) $right-var-map-p $right-var-map-t))
-        (+ (exec (CE 5 3) $map-connectivity-p $map-connectivity-t))
-        (+ (exec (CE 5 4) $connect-map-p $connect-map-t))
-        (+ (exec (CE 5 4) $drop-disconnected-map-p $drop-disconnected-map-t))))
+        (+ (exec (CE 5 3) $same-var-map-p $same-var-map-t))
+        (+ (exec (CE 5 3) $distinct-var-map-p $distinct-var-map-t))
+        (+ (exec (CE 5 3) $left-var-map-p $left-var-map-t))
+        (+ (exec (CE 5 3) $right-var-map-p $right-var-map-t))
+        (+ (exec (CE 5 4) $map-connectivity-p $map-connectivity-t))
+        (+ (exec (CE 5 5) $connect-map-p $connect-map-t))
+        (+ (exec (CE 5 5) $drop-disconnected-map-p $drop-disconnected-map-t))))
 
 ;; Schedule connected-base construction, raw fan-out, and final cleanup.
 (DEF ce-schedule-output-build-fn
@@ -249,14 +247,14 @@
        (DEF ce-cleanup-expand-pair-fn $cleanup-expand-pair-p $cleanup-expand-pair-t)
        (DEF ce-finish-expansion-fn $finish-expansion-p $finish-expansion-t))
     (O
-        (+ (exec (CE 5 5) $connected-base-p $connected-base-t))
-        (+ (exec (CE 5 6) $raw-candidate-p $raw-candidate-t))
+        (+ (exec (CE 5 6) $connected-base-p $connected-base-t))
+        (+ (exec (CE 5 7) $raw-candidate-p $raw-candidate-t))
 
-        (+ (exec (CE 5 7) $cleanup-var-choice-p $cleanup-var-choice-t))
-        (+ (exec (CE 5 7) $cleanup-base-shape-p $cleanup-base-shape-t))
-        (+ (exec (CE 5 7) $cleanup-source-relation-p $cleanup-source-relation-t))
-        (+ (exec (CE 5 7) $cleanup-expand-pair-p $cleanup-expand-pair-t))
-        (+ (exec (CE 5 8) $finish-expansion-p $finish-expansion-t))))
+        (+ (exec (CE 5 8) $cleanup-var-choice-p $cleanup-var-choice-t))
+        (+ (exec (CE 5 8) $cleanup-base-shape-p $cleanup-base-shape-t))
+        (+ (exec (CE 5 8) $cleanup-source-relation-p $cleanup-source-relation-t))
+        (+ (exec (CE 5 8) $cleanup-expand-pair-p $cleanup-expand-pair-t))
+        (+ (exec (CE 5 9) $finish-expansion-p $finish-expansion-t))))
 
 ;; Pair every expandable conjunct with every normalized base pattern.
 (DEF ce-expand-pair-fn
@@ -265,116 +263,61 @@
     (O
         (+ (ce-expand-pair $old-size $conjunct $base))))
 
-;; Inspect each bounded conjunct atom and classify the base's two argument
-;; slots. Explicit size shapes keep the depth bound visible and avoid
-;; out-of-range index operations.
-(DEF ce-expand-pair-details-size-1-fn
-    (, (ce-expand-todo 1 ($atom-0))
-       (ce-expand-pair 1 ($atom-0)
+;; Start a cursor over the complete conjunct and classify the base's two
+;; argument slots once. The cursor carries the original conjunct so facts from
+;; concurrent expansion pairs cannot be mixed.
+(DEF ce-expand-pair-details-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-expand-pair $old-size $conjunct
            ($predicate $base-left $base-right)))
     (O
-        (+ (ce-conjunct-atom
-            1
-            ($atom-0)
+        (+ (ce-expand-pair-scan
+            $old-size
+            $conjunct
             ($predicate $base-left $base-right)
-            $atom-0))
+            $conjunct))
         (pure
             (ce-base-left-check
-                1
-                ($atom-0)
+                $old-size
+                $conjunct
                 ($predicate $base-left $base-right)
                 $left-is-var)
             $left-is-var
             (i8_to_string (is_var (' $base-left))))
         (pure
             (ce-base-right-check
-                1
-                ($atom-0)
+                $old-size
+                $conjunct
                 ($predicate $base-left $base-right)
                 $right-is-var)
             $right-is-var
             (i8_to_string (is_var (' $base-right))))
         (- (ce-expand-pair
-            1
-            ($atom-0)
+            $old-size
+            $conjunct
             ($predicate $base-left $base-right)))))
 
-(DEF ce-expand-pair-details-size-2-fn
-    (, (ce-expand-todo 2 ($atom-0 $atom-1))
-       (ce-expand-pair 2 ($atom-0 $atom-1)
-           ($predicate $base-left $base-right)))
+;; Emit the head atom, replace the remaining list with its tail, and schedule
+;; another pass. car-atom/cdr-atom fail on the empty tail; that last pass only
+;; removes the exhausted cursor and lets the next scheduler stage begin.
+(DEF ce-expand-pair-scan-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-expand-pair-scan $old-size $conjunct $base $remaining)
+       (DEF ce-expand-pair-scan-fn $pair-scan-p $pair-scan-t))
     (O
-        (+ (ce-conjunct-atom
-            2
-            ($atom-0 $atom-1)
-            ($predicate $base-left $base-right)
-            $atom-0))
-        (+ (ce-conjunct-atom
-            2
-            ($atom-0 $atom-1)
-            ($predicate $base-left $base-right)
-            $atom-1))
         (pure
-            (ce-base-left-check
-                2
-                ($atom-0 $atom-1)
-                ($predicate $base-left $base-right)
-                $left-is-var)
-            $left-is-var
-            (i8_to_string (is_var (' $base-left))))
+            (ce-conjunct-atom
+                $old-size $conjunct $base $atom)
+            $atom
+            (car-atom (' $remaining)))
         (pure
-            (ce-base-right-check
-                2
-                ($atom-0 $atom-1)
-                ($predicate $base-left $base-right)
-                $right-is-var)
-            $right-is-var
-            (i8_to_string (is_var (' $base-right))))
-        (- (ce-expand-pair
-            2
-            ($atom-0 $atom-1)
-            ($predicate $base-left $base-right)))))
-
-(DEF ce-expand-pair-details-size-3-fn
-    (, (ce-expand-todo 3 ($atom-0 $atom-1 $atom-2))
-       (ce-expand-pair 3 ($atom-0 $atom-1 $atom-2)
-           ($predicate $base-left $base-right)))
-    (O
-        (+ (ce-conjunct-atom
-            3
-            ($atom-0 $atom-1 $atom-2)
-            ($predicate $base-left $base-right)
-            $atom-0))
-        (+ (ce-conjunct-atom
-            3
-            ($atom-0 $atom-1 $atom-2)
-            ($predicate $base-left $base-right)
-            $atom-1))
-        (+ (ce-conjunct-atom
-            3
-            ($atom-0 $atom-1 $atom-2)
-            ($predicate $base-left $base-right)
-            $atom-2))
-        (pure
-            (ce-base-left-check
-                3
-                ($atom-0 $atom-1 $atom-2)
-                ($predicate $base-left $base-right)
-                $left-is-var)
-            $left-is-var
-            (i8_to_string (is_var (' $base-left))))
-        (pure
-            (ce-base-right-check
-                3
-                ($atom-0 $atom-1 $atom-2)
-                ($predicate $base-left $base-right)
-                $right-is-var)
-            $right-is-var
-            (i8_to_string (is_var (' $base-right))))
-        (- (ce-expand-pair
-            3
-            ($atom-0 $atom-1 $atom-2)
-            ($predicate $base-left $base-right)))))
+            (ce-expand-pair-scan
+                $old-size $conjunct $base $rest)
+            $rest
+            (cdr-atom (' $remaining)))
+        (- (ce-expand-pair-scan
+            $old-size $conjunct $base $remaining))
+        (+ (exec (CE 4 4) $pair-scan-p $pair-scan-t))))
 
 ;; Record whether each conjunct argument is an indexed variable. Constants are
 ;; retained in the conjunct but are not variable choices for a new base.
@@ -432,16 +375,22 @@
         (- (ce-conjunct-var-check
             $old-size $conjunct $base $constant 0))))
 
-;; Successors of existing indexed variables are fresh candidates. Because MM2
-;; indexing is contiguous, removing successors that already exist leaves the
-;; single next variable marker.
+;; Increment every existing variable index to propose fresh candidates. Because
+;; MM2 indexing is contiguous, removing proposals that already exist leaves the
+;; single next variable marker, with no depth-sized successor table.
 (DEF ce-fresh-candidate-fn
     (, (ce-expand-todo $old-size $conjunct)
-       (ce-var-choice $old-size $conjunct $base $var existing)
-       (ce-var-successor $var $successor))
+       (ce-var-choice
+           $old-size $conjunct $base (var $index) existing))
     (O
-        (+ (ce-fresh-candidate
-            $old-size $conjunct $base $successor))))
+        (pure
+            (ce-fresh-candidate
+                $old-size $conjunct $base (var $successor))
+            $successor
+            (i32_to_string
+                (sum_i32
+                    (i32_from_string $index)
+                    (i32_one))))))
 
 (DEF ce-drop-existing-fresh-fn
     (, (ce-expand-todo $old-size $conjunct)
@@ -695,8 +644,8 @@
         (- (ce-base-source-same
             $old-size $conjunct $base $same))))
 
-;; This only matches malformed/non-triplet or out-of-scope pairs; valid pairs
-;; are consumed by a bounded ce-expand-pair-details-size-* function.
+;; This only matches malformed/non-triplet pairs; valid pairs are consumed by
+;; ce-expand-pair-details-fn.
 (DEF ce-cleanup-expand-pair-fn
     (, (ce-expand-todo $old-size $conjunct)
        (ce-expand-pair $old-size $conjunct $base))
@@ -804,12 +753,6 @@
 ;;===============================================================
 ;; Pipeline
 ;;===============================================================
-
-;; Bounded successor metadata provides the next fresh indexed variable for the
-;; first triplet-only implementation (conjunct depth up to three).
-(ce-var-successor (var 0) (var 1))
-(ce-var-successor (var 1) (var 2))
-(ce-var-successor (var 2) (var 3))
 
 ;; Only an existing conjunct variable connects a generated base. Fresh and
 ;; constant slots carry zero so max_i8 implements the connectivity OR.
