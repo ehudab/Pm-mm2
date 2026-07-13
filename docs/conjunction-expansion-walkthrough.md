@@ -80,7 +80,7 @@ This 3-part conjunction matched 2 times in the database.
 | Threshold | The minimum support required to keep a candidate |
 | Depth | The maximum number of conjuncts allowed |
 | Indexed form | Variables rewritten as numbers, such as `(var 0)` |
-| Canonical form | A normalized ordering so duplicates collapse |
+| Canonical form | A normalized atom order and variable numbering so duplicates collapse |
 
 ## Why Variables Are Converted To Indices
 
@@ -185,9 +185,10 @@ The code repeats this cycle:
 5. Keep candidates whose support is high enough.
 6. Save kept candidates as expanded-conjunct facts.
 7. If candidate size is still below max depth, expand it.
-8. Build bigger candidates by adding another base pattern.
+8. Build bigger candidates by adding connected variants of base patterns.
 9. Sort candidate atoms so duplicate orders collapse.
-10. Queue the bigger candidate and repeat.
+10. Re-index variables so alpha-equivalent candidates collapse.
+11. Queue the bigger candidate and repeat.
 ```
 
 Visual flow:
@@ -213,7 +214,10 @@ support threshold check
               |
               +--> at max depth: stop expanding
               |
-              +--> below max depth: combine with base patterns
+              +--> below max depth: build connected base variants
+                                      |
+                                      v
+                                canonical candidate
                                       |
                                       v
                                 new pending candidate
@@ -238,8 +242,12 @@ Examples:
 | `ce-conjunct` | A frequent conjunction saved by the algorithm |
 | `ce-expand-check` | A saved candidate that may need further expansion |
 | `ce-expand-todo` | A candidate approved for expansion |
-| `ce-raw-candidate` | A newly built candidate before sorting |
-| `ce-candidate` | A sorted candidate |
+| `ce-connected-map` | A variable mapping that connects a base to the old candidate |
+| `ce-connected-base` | A base pattern after applying a connected variable mapping |
+| `ce-raw-candidate` | A newly built candidate before canonicalization |
+| `ce-sorted-candidate` | Candidate after atom-order sorting |
+| `ce-candidate-vars` | Sorted candidate temporarily converted back to real variables |
+| `ce-candidate` | Candidate after sorting and alpha-normalized variable indexing |
 | `ce-candidate-size` | The size of a candidate |
 
 ## Why There Are Many Small Functions
@@ -512,15 +520,55 @@ If the candidate is already at max depth, it is saved but not expanded further.
 
 ## Stage 4: Build Bigger Candidates
 
-When a candidate is approved for expansion, the code combines it with every
-base pattern:
+When a candidate is approved for expansion, the code pairs it with every base
+pattern:
 
 ```lisp
 (ce-expand-todo $old-size $conjunct)
 (ce-base $base)
 ```
 
-Then it creates:
+It does not add the base exactly as written. First it builds connected variants
+of the base by mapping the base variables onto:
+
+```text
+existing variables from the old candidate
+or the next fresh variable
+```
+
+At least one mapped position must use an existing variable. That is what makes
+the new base connected to the old candidate.
+
+Example old candidate:
+
+```lisp
+((Parent (var 0) (var 1)))
+```
+
+Example base:
+
+```lisp
+(Parent (var 0) (var 1))
+```
+
+Useful connected variants include:
+
+```lisp
+(Parent (var 1) (var 2))
+(Parent (var 0) (var 2))
+(Parent (var 2) (var 0))
+```
+
+But this disconnected variant is rejected:
+
+```lisp
+(Parent (var 2) (var 3))
+```
+
+because neither side touches `(var 0)` or `(var 1)` from the old candidate.
+
+After a connected base variant is built, the code unions it with the old
+candidate and creates:
 
 ```lisp
 (ce-raw-candidate $old-size $raw)
@@ -531,7 +579,7 @@ This is the new bigger candidate before cleanup.
 Conceptually:
 
 ```text
-old candidate + one base pattern = bigger candidate
+old candidate + one connected base variant = bigger candidate
 ```
 
 Example:
@@ -554,6 +602,9 @@ union-atom
 instead of simply adding with `cons`.
 
 The reason is duplicate prevention.
+
+After the connected base variant is built, `union-atom` prevents duplicate atoms
+inside one conjunction.
 
 If a candidate already contains:
 
@@ -594,8 +645,42 @@ So the code canonicalizes the order:
 sort-atom
 ```
 
-After sorting, both versions become the same stored candidate. This prevents
-duplicate work and duplicate results.
+After sorting, both versions get the same atom order. This prevents duplicates
+that differ only by conjunct order.
+
+## Why Alpha-Normalization Is Used
+
+Sorting handles order duplicates, but not every duplicate shape.
+
+These two candidates are alpha-equivalent:
+
+```lisp
+((Parent (var 0) (var 1))
+ (Inheritance (var 0) (var 2)))
+```
+
+```lisp
+((Parent (var 0) (var 2))
+ (Inheritance (var 0) (var 1)))
+```
+
+They differ only by swapping the names of `(var 1)` and `(var 2)`. Logically
+they ask the same query.
+
+The code handles this without a Rust helper by staging two existing conversions
+after sorting:
+
+```lisp
+indices_to_vars
+vars_to_indices
+```
+
+First, the sorted indexed candidate is converted back into real MM2 variables.
+Then it is converted back to indexed form. That second conversion assigns
+`(var 0)`, `(var 1)`, `(var 2)` by first occurrence in the sorted candidate.
+
+So alpha-equivalent candidates collapse to the same exact stored `ce-candidate`
+before size checks and support counting.
 
 ## Why Candidate Size Is Checked Twice
 
@@ -710,9 +795,11 @@ The code assumes:
 3. Indexed variables can be converted back with `indices_to_vars` for counting.
 4. Support counts can be converted to `i32`.
 5. Conjunction order does not matter, so sorting is valid.
-6. Duplicate conjuncts should not increase candidate size.
-7. A candidate should only continue expanding if it is frequent enough.
-8. Expansion stops at `depth-of-conjunct`.
+6. Variable names do not matter beyond equality structure, so alpha-normalization is valid.
+7. Duplicate conjuncts should not increase candidate size.
+8. A new base must connect to the old candidate through at least one existing variable.
+9. A candidate should only continue expanding if it is frequent enough.
+10. Expansion stops at `depth-of-conjunct`.
 
 ## How To Read The Source File
 
@@ -748,12 +835,17 @@ expanded-conjunct
 ce-expand-todo
   means "try to make this candidate bigger"
 
+ce-raw-candidate
+  means "a connected base variant was unioned with the old candidate"
+
+ce-sorted-candidate / ce-candidate-vars
+  means "the candidate is being canonicalized"
+
 ce-candidate
-  means "a bigger candidate was built and normalized"
+  means "a bigger candidate was fully normalized"
 
 ce-pending again
   means "test the bigger candidate next"
 ```
 
 The whole file is that loop.
-
