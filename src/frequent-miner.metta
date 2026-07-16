@@ -420,9 +420,55 @@
     (+ (exec (SAE 2 start-walk) $walk-p $walk-t))
     (+ (exec (SAE 3 step-new-node) $step-p $step-t))))
 
-(shallow-abstract-expression expr-smoke (var 0) (Eval Allen Allen Allenc lili Allenc hi))
-(exec (SAE 0 call-expr)
-  (, (shallow-abstract-expression expr-smoke (var 0) (Eval Allen Allen Allenc lili Allenc hi))
-     (DEF shallow-abstract-expression-fn $p $t))
-  (O (+ (exec (SAE 0 run-expr) $p $t))))
 
+
+(DEF shallow-abstraction-start
+  (, (run-shallow-abstraction $id) (valuation-binding $id $candidate-id $path (var $source-index) $value))
+  (O (pure (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var)
+       $is-var (i8_to_string (is_var (' $value))))))
+
+(DEF shallow-abstraction-step
+  (, (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var))
+  (O
+    (+ (exec (ABS 2 keep-var)
+         (, (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+         (O (- (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+            (+ (shallow-abstraction-binding $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value)))))
+    (+ (exec (ABS 3 abstract-expression)
+         (, (shallow-abstraction-request $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 0)
+            (DEF shallow-abstract-expression-fn $sae-p $sae-t)
+            (DEF shallow-abstraction-expression-finish $finish-p $finish-t))
+         (O
+            (- (shallow-abstraction-request $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 0))
+            (+ (shallow-abstract-expression (SAE $expr-id $expr-candidate-id $expr-path) (var $expr-source-index) $expr-value))
+            (+ (shallow-abstraction-wait $expr-id $expr-candidate-id $expr-path (var $expr-source-index) (SAE $expr-id $expr-candidate-id $expr-path)))
+            (+ (exec (ABS 3 run-sae-expression) $sae-p $sae-t))
+            (+ (exec (ABS 9 finish-expression 0 0) $finish-p $finish-t)))))
+    (+ (exec (ABS 9 keep-atom)
+         (, (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+         (O (- (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+            (+ (shallow-abstraction-binding $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value)))))))
+
+(DEF shallow-abstraction-expression-finish
+  (, (shallow-abstraction-wait $id $candidate-id $path (var $source-index) $sae-id)
+     (sae-step-result $sae-id (var $source-index) $abstracted-value))
+  (O
+    (- (shallow-abstraction-wait $id $candidate-id $path (var $source-index) $sae-id))
+    (+ (shallow-abstraction-binding $id $candidate-id $path (var $source-index) $abstracted-value))))
+
+(DEF shallow-abstraction-fn
+  (, (run-shallow-abstraction $id)
+     (DEF shallow-abstraction-start $start-p $start-t)
+     (DEF shallow-abstraction-step $step-p $step-t))
+  (O
+    (+ (exec (ABS 0 start) $start-p $start-t))
+    (+ (exec (ABS 1 step) $step-p $step-t))))
+
+(run-shallow-abstraction abs-example)
+(valuation-binding abs-example c1 (root arg/2) (var 0) (Eval Allen Lily Allen))
+(valuation-binding abs-example c2 (root arg/1) (var 0) Allen)
+(valuation-binding abs-example c3 (root arg/3) (var 0) (var 1))
+(exec (ABS 0 call-example)
+  (, (run-shallow-abstraction abs-example)
+     (DEF shallow-abstraction-fn $abs-p $abs-t))
+  (O (+ (exec (ABS 0 run-shallow-abstraction) $abs-p $abs-t))))
