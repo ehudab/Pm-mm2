@@ -309,9 +309,9 @@
 ;
 ; This is the small reusable core for the next abstraction pass:
 ;   1. split an expression into link + args using car-atom/cdr-atom
-;   2. collect abstracted args with cons, which builds them reversed
-;   3. reverse the collected args
-;   4. cons the original link back onto the args
+;   2. collect abstracted args with append
+;   3. reuse split variables from per-expression history when values repeat
+;   4. keep the original link available for the rebuild stage
 ;
 ; Request:
 ;   (sae-rebuild-smoke $id $expr $reversed-abstracted-args)
@@ -327,9 +327,7 @@
 ;   (shallow-abstract-expression-result $id $abstracted-expr)
 ;
 ; The helper walks the direct args of $expr, keeps the link unchanged, stores
-; value -> split-var history in atomspace, collects output with cons, reverses
-; it at the end, then rebuilds with cons.
-
+; value -> split-var history in atomspace, and collects output with append.
 (sae-index-next 1 2)
 (sae-index-next 2 3)
 (sae-index-next 3 4)
@@ -343,25 +341,50 @@
   (, (shallow-abstract-expression $id (var $source-index) $expr))
   (O
     (pure (sae-link $id $link) $link (car-atom (' $expr)))
-    (pure (sae-args $id (var $source-index) $args) $args (cdr-atom (' $expr)))
-    (+ (sae-start-result $id (var $source-index) $expr))))
+    (pure (sae-args $id (var $source-index) $args) $args (cdr-atom (' $expr)))))
 
 (DEF sae-start-walk
   (, (sae-args $id (var $source-index) $args))
   (O
-    (+ (sae-walk $id (var $source-index) $args 1 (')))))
+    (+ (sae-walk $id (var $source-index) $args 1 ()))))
 
 (DEF sae-step
   (, (sae-walk $id (var $source-index) $args $pos $acc)
      (sae-index-next $pos $next-pos)
-     (DEF sae-continue $cont-p $cont-t))
+     (DEF sae-history-resolve $hist-p $hist-t))
   (O
-    (- (sae-walk $id (var $source-index) $args $pos $acc))
     (pure (sae-current $id $pos $value) $value (car-atom (' $args)))
     (pure (sae-step-rest $id (var $source-index) $pos $rest) $rest (cdr-atom (' $args)))
-    (pure (sae-step-acc $id (var $source-index) $next-pos $next-acc) $next-acc
-      (append (' ($acc ((var ($source-index $pos)))))))
-    (+ (exec (SAE 4 continue-walk) $cont-p $cont-t))))
+    (- (sae-walk $id (var $source-index) $args $pos $acc))
+    (+ (sae-history-pending $id (var $source-index) $pos $next-pos $acc))
+    (+ (exec (SAE 4 resolve-history) $hist-p $hist-t))))
+
+(DEF sae-history-resolve
+  (, (sae-history-pending $id (var $source-index) $pos $next-pos $acc)
+     (sae-current $id $pos $value)
+     (sae-step-rest $id (var $source-index) $pos $rest)
+     (DEF sae-continue $cont-p $cont-t))
+  (O
+    (+ (exec (SAE 4 0 reuse-history)
+         (, (sae-history-pending $reuse-id (var $reuse-source-index) $reuse-pos $reuse-next-pos $reuse-acc)
+            (sae-current $reuse-id $reuse-pos $reuse-value)
+            (sae-step-rest $reuse-id (var $reuse-source-index) $reuse-pos $reuse-rest)
+            (sae-pos-history $reuse-id (var $reuse-source-index) $reuse-value $first-pos))
+         (O
+           (- (sae-history-pending $reuse-id (var $reuse-source-index) $reuse-pos $reuse-next-pos $reuse-acc))
+           (pure (sae-step-acc $reuse-id (var $reuse-source-index) $reuse-next-pos $reuse-next-acc) $reuse-next-acc
+             (append (' ($reuse-acc ((var ($reuse-source-index $first-pos)))))))
+           (+ (exec (SAE 5 continue-walk) $cont-p $cont-t)))))
+    (+ (exec (SAE 4 1 new-history)
+         (, (sae-history-pending $new-id (var $new-source-index) $new-pos $new-next-pos $new-acc)
+            (sae-current $new-id $new-pos $new-value)
+            (sae-step-rest $new-id (var $new-source-index) $new-pos $new-rest))
+         (O
+           (- (sae-history-pending $new-id (var $new-source-index) $new-pos $new-next-pos $new-acc))
+           (+ (sae-pos-history $new-id (var $new-source-index) $new-value $new-pos))
+           (pure (sae-step-acc $new-id (var $new-source-index) $new-next-pos $new-next-acc) $new-next-acc
+             (append (' ($new-acc ((var ($new-source-index $new-pos)))))))
+           (+ (exec (SAE 5 continue-walk) $cont-p $cont-t)))))))
 
 (DEF sae-continue
   (, (sae-step-rest $id (var $source-index) $pos $rest)
@@ -372,15 +395,20 @@
     (- (sae-step-rest $id (var $source-index) $pos $rest))
     (- (sae-step-acc $id (var $source-index) $next-pos $next-acc))
     (+ (sae-walk $id (var $source-index) $rest $next-pos $next-acc))
-    (+ (sae-walk-save $id (var $source-index) $rest $next-pos $next-acc))
     (+ (exec (SAE 5 finish-walk) $finish-p $finish-t))
     (+ (exec (SAE 6 step-new-node) $step-p $step-t))))
 
 (DEF sae-finish
-  (, (sae-walk $id (var $source-index) () $pos $acc))
+  (, (sae-walk $id (var $source-index) () $pos $acc)
+     (sae-link $id $link)
+     (sae-current $rid $rpos $rvalue)
+     (sae-pos-history $rid $rs-index $rvalue $rfirst-pos))
   (O
     (- (sae-walk $id (var $source-index) () $pos $acc))
-    (+ (sae-step-result $id (var $source-index) $acc))))
+    (- (sae-link $id $link))
+    (- (sae-current $rid $rpos $rvalue))
+    (- (sae-pos-history $rid $rs-index $rvalue $rfirst-pos))
+    (pure (sae-step-result $id (var $source-index) $res) $res (append (' (($link) $acc))))))
 
 (DEF shallow-abstract-expression-fn
   (, (shallow-abstract-expression $id (var $source-index) $expr)
@@ -392,27 +420,9 @@
     (+ (exec (SAE 2 start-walk) $walk-p $walk-t))
     (+ (exec (SAE 3 step-new-node) $step-p $step-t))))
 
-; Example call, kept inactive:
-; (run-shallow-abstraction abs-example)
-; (valuation-binding abs-example c1 (root arg/2) (var 0) (Eval Allen soda))
-; (valuation-binding abs-example c2 (root arg/2) (var 0) (Eval Allen Allen))
-; (valuation-binding abs-example c3 (root arg/1) (var 0) Allen)
-; (valuation-binding abs-example c4 (root arg/1) (var 0) (var 1))
-; (exec (ABS 0 call-example)
-;   (, (run-shallow-abstraction abs-example)
-;      (DEF shallow-abstraction-fn $abs-p $abs-t))
-;   (O (+ (exec (ABS 0 run-shallow-abstraction) $abs-p $abs-t))))
-
-(shallow-abstract-expression expr-smoke (var 0) (Eval Allen Lily Cason))
+(shallow-abstract-expression expr-smoke (var 0) (Eval Allen Allen Allenc lili Allenc hi))
 (exec (SAE 0 call-expr)
-  (, (shallow-abstract-expression expr-smoke (var 0) (Eval Allen Lily Cason))
+  (, (shallow-abstract-expression expr-smoke (var 0) (Eval Allen Allen Allenc lili Allenc hi))
      (DEF shallow-abstract-expression-fn $p $t))
   (O (+ (exec (SAE 0 run-expr) $p $t))))
 
-; append accumulator smoke, kept inactive:
-; (sae-acc-smoke ('))
-; (exec (SAE 0 acc-smoke)
-;   (, (sae-acc-smoke $acc))
-;   (O
-;     (pure (sae-acc-result $new) $new
-;       (append (' ($acc ((var (0 1)))))))))
