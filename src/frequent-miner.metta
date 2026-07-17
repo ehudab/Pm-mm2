@@ -268,66 +268,6 @@
 ;      (Eval (var (0 1)) (var (0 2))))
 ;
 ; Nested expression arguments are treated as one shallow child for now.
-
-(DEF shallow-abstraction-start
-  (, (run-shallow-abstraction $id) (valuation-binding $id $candidate-id $path (var $source-index) $value))
-  (O (pure (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var)
-       $is-var (i8_to_string (is_var (' $value))))))
-
-(DEF shallow-abstraction-step
-  (, (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var))
-  (O
-    (+ (exec (ABS 2 keep-var)
-         (, (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
-         (O (- (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
-            (+ (shallow-abstraction-binding $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value)))))
-    (+ (exec (ABS 3 split-pair)
-         (, (shallow-abstraction-request $pair-id $pair-candidate-id $pair-path (var $pair-source-index) ($link $a) 0))
-         (O (- (shallow-abstraction-request $pair-id $pair-candidate-id $pair-path (var $pair-source-index) ($link $a) 0))
-            (+ (shallow-abstraction-binding $pair-id $pair-candidate-id $pair-path (var $pair-source-index)
-                 ($link (var ($pair-source-index 1))))))))
-    (+ (exec (ABS 3 split-triplet-same-args)
-         (, (shallow-abstraction-request $same-id $same-candidate-id $same-path (var $same-source-index) ($link $a $a) 0))
-         (O (- (shallow-abstraction-request $same-id $same-candidate-id $same-path (var $same-source-index) ($link $a $a) 0))
-            (+ (shallow-abstraction-binding $same-id $same-candidate-id $same-path (var $same-source-index)
-                 ($link (var ($same-source-index 1)) (var ($same-source-index 1))))))))
-    (+ (exec (ABS 4 split-triplet)
-         (, (shallow-abstraction-request $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index) ($link $a $b) 0))
-         (O (- (shallow-abstraction-request $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index) ($link $a $b) 0))
-            (+ (shallow-abstraction-binding $triplet-id $triplet-candidate-id $triplet-path (var $triplet-source-index)
-                 ($link (var ($triplet-source-index 1)) (var ($triplet-source-index 2))))))))
-    (+ (exec (ABS 9 keep-atom)
-         (, (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
-         (O (- (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
-            (+ (shallow-abstraction-binding $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value)))))))
-
-(DEF shallow-abstraction-fn
-  (, (run-shallow-abstraction $id) (DEF shallow-abstraction-start $start-p $start-t) (DEF shallow-abstraction-step $step-p $step-t))
-  (O (+ (exec (ABS 0 start) $start-p $start-t)) (+ (exec (ABS 1 step) $step-p $step-t))))
-
-; shallow expression abstraction primitives
-;
-; This is the small reusable core for the next abstraction pass:
-;   1. split an expression into link + args using car-atom/cdr-atom
-;   2. collect abstracted args with append
-;   3. reuse split variables from per-expression history when values repeat
-;   4. keep the original link available for the rebuild stage
-;
-; Request:
-;   (sae-rebuild-smoke $id $expr $reversed-abstracted-args)
-;
-; Result:
-;   (sae-rebuild-smoke-result $id $rebuilt)
-; shallow abstract expression
-;
-; Request:
-;   (shallow-abstract-expression $id (var $source-index) $expr)
-;
-; Result:
-;   (shallow-abstract-expression-result $id $abstracted-expr)
-;
-; The helper walks the direct args of $expr, keeps the link unchanged, stores
-; value -> split-var history in atomspace, and collects output with append.
 (sae-index-next 1 2)
 (sae-index-next 2 3)
 (sae-index-next 3 4)
