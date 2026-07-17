@@ -424,30 +424,38 @@
 
 (DEF shallow-abstraction-start
   (, (run-shallow-abstraction $id) (valuation-binding $id $candidate-id $path (var $source-index) $value))
-  (O (pure (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var)
-       $is-var (i8_to_string (is_var (' $value))))))
+  (O (pure (shallow-abstraction-request-var $id $candidate-id $path (var $source-index) $value $is-var)
+       $is-var (i8_to_string (is_var (' $value))))
+     (pure (shallow-abstraction-request-expr $id $candidate-id $path (var $source-index) $value $is-exp)
+       $is-exp (i8_to_string (is_exp (' $value))))))
 
 (DEF shallow-abstraction-step
-  (, (shallow-abstraction-request $id $candidate-id $path (var $source-index) $value $is-var))
+  (, (shallow-abstraction-request-var $id $candidate-id $path (var $source-index) $value $is-var)
+     (shallow-abstraction-request-expr $id $candidate-id $path (var $source-index) $value $is-exp))
   (O
     (+ (exec (ABS 2 keep-var)
-         (, (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
-         (O (- (shallow-abstraction-request $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+         (, (shallow-abstraction-request-var $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
+         (O (- (shallow-abstraction-request-var $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value 1))
             (+ (shallow-abstraction-binding $keep-id $keep-candidate-id $keep-path (var $keep-source-index) $keep-value)))))
     (+ (exec (ABS 3 abstract-expression)
-         (, (shallow-abstraction-request $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 0)
+         (, (shallow-abstraction-request-var $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 0)
+            (shallow-abstraction-request-expr $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 1)
             (DEF shallow-abstract-expression-fn $sae-p $sae-t)
             (DEF shallow-abstraction-expression-finish $finish-p $finish-t))
          (O
-            (- (shallow-abstraction-request $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 0))
+            (- (shallow-abstraction-request-expr $expr-id $expr-candidate-id $expr-path (var $expr-source-index) $expr-value 1))
             (+ (shallow-abstract-expression (SAE $expr-id $expr-candidate-id $expr-path) (var $expr-source-index) $expr-value))
             (+ (shallow-abstraction-wait $expr-id $expr-candidate-id $expr-path (var $expr-source-index) (SAE $expr-id $expr-candidate-id $expr-path)))
             (+ (exec (ABS 3 run-sae-expression) $sae-p $sae-t))
             (+ (exec (ABS 9 finish-expression 0 0) $finish-p $finish-t)))))
     (+ (exec (ABS 9 keep-atom)
-         (, (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
-         (O (- (shallow-abstraction-request $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+         (, (shallow-abstraction-request-var $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0)
+           (shallow-abstraction-request-expr $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+         (O (- (shallow-abstraction-request-expr $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
+            (- (shallow-abstraction-request-var $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value 0))
             (+ (shallow-abstraction-binding $atom-id $atom-candidate-id $atom-path (var $atom-source-index) $atom-value)))))))
+
+
 
 (DEF shallow-abstraction-expression-finish
   (, (shallow-abstraction-wait $id $candidate-id $path (var $source-index) $sae-id)
@@ -472,3 +480,4 @@
   (, (run-shallow-abstraction abs-example)
      (DEF shallow-abstraction-fn $abs-p $abs-t))
   (O (+ (exec (ABS 0 run-shallow-abstraction) $abs-p $abs-t))))
+
