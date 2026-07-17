@@ -185,7 +185,7 @@ The code repeats this cycle:
 5. Keep candidates whose support is high enough.
 6. Save kept candidates as expanded-conjunct facts.
 7. If candidate size is still below max depth, expand it.
-8. Build bigger candidates by adding connected variants of base patterns.
+8. Scan the old candidate dynamically and add connected variants of base patterns.
 9. Sort candidate atoms so duplicate orders collapse.
 10. Re-index variables so alpha-equivalent candidates collapse.
 11. Queue the bigger candidate and repeat.
@@ -242,6 +242,10 @@ Examples:
 | `ce-conjunct` | A frequent conjunction saved by the algorithm |
 | `ce-expand-check` | A saved candidate that may need further expansion |
 | `ce-expand-todo` | A candidate approved for expansion |
+| `ce-expand-pair` | One old candidate paired with one possible base pattern |
+| `ce-expand-pair-scan` | A cursor holding the unprocessed tail of an old candidate |
+| `ce-conjunct-atom` | One old-candidate atom emitted by the cursor |
+| `ce-var-choice` | An existing or fresh variable available to a base slot |
 | `ce-connected-map` | A variable mapping that connects a base to the old candidate |
 | `ce-connected-base` | A base pattern after applying a connected variable mapping |
 | `ce-raw-candidate` | A newly built candidate before canonicalization |
@@ -518,7 +522,15 @@ lt_i32
 
 If the candidate is already at max depth, it is saved but not expanded further.
 
+This depth is configuration, not a hard-coded implementation size. The demo
+uses `3`, but the candidate scanner does not contain separate size-1, size-2,
+or size-3 cases. A larger configured value does not require another extraction
+rule.
+
 ## Stage 4: Build Bigger Candidates
+
+For a complete fact-by-fact size-2 to size-3 example, see
+[Conjunction Expansion: Complete Size-2 To Size-3 Trace](conjunction-expansion-size-2-to-3-trace.md).
 
 When a candidate is approved for expansion, the code pairs it with every base
 pattern:
@@ -527,6 +539,86 @@ pattern:
 (ce-expand-todo $old-size $conjunct)
 (ce-base $base)
 ```
+
+That creates one `ce-expand-pair` for each candidate/base combination. Candidate
+construction then has four parts: inspect the old candidate, collect variable
+choices, build and filter base mappings, and emit raw candidates.
+
+### How The Old Candidate Is Scanned At Any Depth
+
+`ce-expand-pair-details-fn` starts a cursor containing both the complete old
+candidate and the unprocessed part:
+
+```lisp
+(ce-expand-pair-scan
+  $old-size
+  $conjunct
+  $base
+  $remaining)
+```
+
+At the beginning, `$remaining` is the complete `$conjunct`. One execution of
+`ce-expand-pair-scan-fn` does this:
+
+```text
+remaining = (A B C D)
+emit       = A
+next       = (B C D)
+```
+
+It obtains `A` with:
+
+```lisp
+car-atom
+```
+
+and obtains `(B C D)` with:
+
+```lisp
+cdr-atom
+```
+
+The emitted head becomes a `ce-conjunct-atom`. The rule removes the old cursor,
+saves the tail as the next cursor, and schedules itself again. Repeated passes
+therefore emit `A`, `B`, `C`, and `D` without knowing the list size beforehand.
+
+After the final atom, the remaining value is empty. `car-atom` and `cdr-atom`
+produce no next result, the exhausted cursor is removed, and recursion stops.
+The next scheduler stage then inspects the emitted triplets' left and right
+arguments with `is_var`.
+
+The original `$conjunct` and `$base` stay in every cursor and emitted fact. This
+keeps simultaneous candidate/base scans isolated from one another.
+
+This is native MM2 recursion: the function re-schedules its own `DEF` template.
+No Rust list walker or depth-sized rule table is involved.
+
+### How Existing And Fresh Variables Are Collected
+
+Each indexed variable found in the old candidate becomes an `existing` choice.
+Constants are discarded from this choice stream because they cannot serve as
+variable connection points.
+
+The next fresh variable is computed dynamically. For every existing
+`(var $index)`, MM2 evaluates:
+
+```lisp
+(i32_to_string
+  (sum_i32
+    (i32_from_string $index)
+    (i32_one)))
+```
+
+For example, existing variables `(var 0)` and `(var 1)` propose `(var 1)` and
+`(var 2)`. The collision-removal stage drops `(var 1)` because it already
+exists, leaving `(var 2)` as the single fresh choice.
+
+This works because `vars_to_indices` keeps variable indices contiguous. At a
+deeper level, existing variables `(var 0)` through `(var 4)` similarly leave
+`(var 5)` as fresh. There is no `ce-var-successor` table to extend when the
+configured conjunction depth changes.
+
+### How A Base Becomes Connected
 
 It does not add the base exactly as written. First it builds connected variants
 of the base by mapping the base variables onto:
@@ -559,13 +651,14 @@ Useful connected variants include:
 (Parent (var 2) (var 0))
 ```
 
-But this disconnected variant is rejected:
+But this generated fresh-only variant is rejected:
 
 ```lisp
-(Parent (var 2) (var 3))
+(Parent (var 2) (var 2))
 ```
 
-because neither side touches `(var 0)` or `(var 1)` from the old candidate.
+because neither side uses `(var 0)` or `(var 1)` from the old candidate. A map
+is connected only when at least one output slot uses an `existing` choice.
 
 After a connected base variant is built, the code unions it with the old
 candidate and creates:
@@ -735,6 +828,11 @@ The bottom of the file contains a tiny runnable example:
 (support-threshold 2)
 ```
 
+Here `3` only chooses where this demo stops. The list cursor and fresh-variable
+calculation are independent of that value, so a caller can configure a larger
+conjunction depth without changing the implementation. Pattern atoms themselves
+must still have triplet shape.
+
 Then it includes database facts like:
 
 ```lisp
@@ -799,7 +897,7 @@ The code assumes:
 7. Duplicate conjuncts should not increase candidate size.
 8. A new base must connect to the old candidate through at least one existing variable.
 9. A candidate should only continue expanding if it is frequent enough.
-10. Expansion stops at `depth-of-conjunct`.
+10. `depth-of-conjunct` is a configurable stopping policy, not a scanner limit.
 
 ## How To Read The Source File
 
@@ -810,8 +908,10 @@ Read it in this order:
 3. Read `ce-support-fn` to see how candidates are counted.
 4. Read the support threshold functions.
 5. Read the depth check functions.
-6. Read the candidate building functions.
-7. Return to `ce-support-fn` and notice how it schedules the next stages.
+6. Read `ce-expand-pair-details-fn` and `ce-expand-pair-scan-fn` to see the
+   dynamic candidate walk.
+7. Read the variable-choice and connected-map functions.
+8. Return to `ce-support-fn` and notice how it schedules the next stages.
 
 That order is easier than reading strictly top to bottom.
 
@@ -834,6 +934,12 @@ expanded-conjunct
 
 ce-expand-todo
   means "try to make this candidate bigger"
+
+ce-expand-pair-scan
+  means "emit the next old-candidate atom and continue with the tail"
+
+ce-var-choice
+  means "this existing or fresh variable may fill a base variable slot"
 
 ce-raw-candidate
   means "a connected base variant was unioned with the old candidate"
