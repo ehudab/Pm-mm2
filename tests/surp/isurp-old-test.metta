@@ -1,4 +1,5 @@
 ;; TEST-AUX data/ugly-sodaDrinker.metta
+;; TEST-AUX src/common-utils/utils.metta
 ;; TEST-AUX src/surp.metta
 
 ;;;;;;;;;;;;;;;;
