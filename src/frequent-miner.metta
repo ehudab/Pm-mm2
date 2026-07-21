@@ -89,7 +89,7 @@
          (O
            (- (gap-wait $sel-id $path $parent $arg))
            (pure (gap-value $sel-id $path $value) $value
-             (index-atom $index (' $parent-value)))
+             (index-atom (' $parent-value) $index))
            (+ (exec (GAP 0 select) $select-p $select-t)))))
 
     (+ (exec (GAP 9 result)
