@@ -37,7 +37,7 @@
                         $query)))
             $query
             (indices_to_vars
-                (cons , ($candidate))))
+                (cons , (' $candidate))))
         ;; Compact schedulers keep template substitution below MORK's variable
         ;; limit while preserving the original stage ordering.
         (+ (exec (CE 2 0) $support-filter-p $support-filter-t))
