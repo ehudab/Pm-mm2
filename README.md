@@ -1,6 +1,6 @@
 # Hyperon Miner MM2
 
-This repository is the MM2/MORK port of [`hyperon-miner`](../hyperon-miner).
+This repository is the MM2/MORK port of [`hyperon-miner`](https://github.com/iCog-Labs-Dev/hyperon-miner).
 The goal is to port the full Hyperon Miner pipeline into MM2 programs that can
 run in one MORK atomspace.
 
@@ -10,37 +10,29 @@ run in one MORK atomspace.
 docs/
   data-model.md              Shared MM2 data model and priority conventions
   isurp-old-validation.md    Validation notes against PeTTa isurp-old
+  testing.md                 Test file format and runner workflow
+
+data/
+  ugly-sodaDrinker.metta     Sample AtomSpace facts 
 
 src/
   surp.metta                 Current MM2 implementation of isurp-old
   frequent-miner.metta       Early frequent-miner/helper work
-  dummy.metta                Scratch file, currently empty
+  dummy.metta                Scratch file, 
+
+tests/
+  surp/isurp-old-test.metta  Runnable MM2 test case
+
+scripts/
+  run-tests.sh               Test runner for *-test.metta files
 ```
 
 ## Dependencies
 
-This project expects a MORK build with the local MM2 helper extensions and
-`mm2-stdlib` helpers available.
+This project expects a MORK build with the local [`mm2-helper`](https://github.com/iCog-Labs-Dev/MM2-Helper) extensions and
+[`mm2-stdlib`](https://github.com/abnsol/mm2-stdlib) helpers available.
 
-## Running The Current Surprisingness Program
 
-Run the sample data embedded in `src/surp.metta`:
-
-```sh
-mork run src/surp.metta /tmp/hyperon-miner-mm2-surp-out.metta --steps 200 --instrumentation 0
-```
-
-Then inspect the final result:
-
-```sh
-rg "surprisingess-of" /tmp/hyperon-miner-mm2-surp-out.metta
-```
-
-Expected sample result:
-
-```metta
-(surprisingess-of ... 0.999707773232028)
-```
 
 ## Running Tests
 
@@ -50,8 +42,25 @@ Run all test cases:
 scripts/run-tests.sh
 ```
 
+Run one test case:
+
+```sh
+scripts/run-tests.sh tests/surp/isurp-old-test.metta
+```
+
 Use `MORK_BIN` when `mork` is not on `PATH`:
 
 ```sh
 MORK_BIN=/path/to/mork scripts/run-tests.sh
 ```
+
+Test files keep runner metadata in MM2 comments:
+
+```metta
+;; TEST-AUX data/ugly-sodaDrinker.metta
+;; TEST-AUX src/surp.metta
+
+(EXPECTED-RESULT test-id (...))
+```
+
+See `docs/testing.md` for the full test guide.

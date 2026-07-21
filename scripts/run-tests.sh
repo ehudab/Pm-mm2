@@ -25,76 +25,107 @@ mkdir -p "$OUT_DIR"
 total=0
 failures=0
 
-read_case_value() {
+read_test_value() {
   local case_file="$1"
   local key="$2"
   local line
-  line="$(grep -m 1 "^${key}=" "$case_file" || true)"
-  printf '%s' "${line#${key}=}"
+  line="$(grep -m 1 "^;; ${key} " "$case_file" || true)"
+  printf '%s' "${line#;; ${key} }"
+}
+
+append_aux_paths() {
+  local case_file="$1"
+  local aux_path
+
+  while IFS= read -r aux_path || [[ -n "$aux_path" ]]; do
+    [[ -z "$aux_path" ]] && continue
+    if [[ "$aux_path" != /* ]]; then
+      aux_path="$ROOT_DIR/$aux_path"
+    fi
+    aux_args+=("--aux-path" "$aux_path")
+  done < <(sed -n 's/^;; TEST-AUX[[:space:]]\{1,\}//p' "$case_file")
+}
+
+expected_results() {
+  local case_file="$1"
+  sed -n 's/^[[:space:]]*(EXPECTED-RESULT[[:space:]]\{1,\}\([^[:space:])][^[:space:])]*\)[[:space:]]\{1,\}\(.*\))[[:space:]]*$/\1 \2/p' "$case_file"
 }
 
 run_case() {
   local case_file="$1"
-  local expected_file="${case_file%.test}.expected"
-  local rel_case="${case_file#$TEST_ROOT/}"
-  local out_file="$OUT_DIR/${rel_case%.test}.out.metta"
-  local input_path
+  local rel_case
+  local out_file
   local steps
+  local expected_count=0
+  local expected_entry
+  local test_id
+  local expected
+  local aux_args=()
+
+  if [[ "$case_file" != /* ]]; then
+    case_file="$ROOT_DIR/$case_file"
+  fi
+
+  rel_case="${case_file#$TEST_ROOT/}"
+  out_file="$OUT_DIR/${rel_case%.metta}.out.metta"
 
   total=$((total + 1))
 
-  if [[ ! -f "$expected_file" ]]; then
+  if [[ ! -f "$case_file" ]]; then
     echo "FAIL $rel_case"
-    echo "  missing expected file: ${expected_file#$ROOT_DIR/}"
+    echo "  missing test file"
     failures=$((failures + 1))
     return
   fi
 
-  input_path="$(read_case_value "$case_file" input)"
-  steps="$(read_case_value "$case_file" steps)"
+  steps="$(read_test_value "$case_file" TEST-STEPS)"
   steps="${steps:-100000}"
-
-  if [[ -z "$input_path" ]]; then
-    echo "FAIL $rel_case"
-    echo "  missing input=... in test case"
-    failures=$((failures + 1))
-    return
-  fi
-
-  if [[ "$input_path" != /* ]]; then
-    input_path="$ROOT_DIR/$input_path"
-  fi
+  append_aux_paths "$case_file"
 
   mkdir -p "$(dirname "$out_file")"
 
   echo "RUN  $rel_case"
-  if ! "$MORK_BIN" run "$input_path" "$out_file" --steps "$steps" --instrumentation 0 >/dev/null; then
+  if ! "$MORK_BIN" run "$case_file" "$out_file" "${aux_args[@]}" --steps "$steps" --instrumentation 0 >/dev/null; then
     echo "FAIL $rel_case"
     echo "  mork run failed"
     failures=$((failures + 1))
     return
   fi
 
-  while IFS= read -r expected || [[ -n "$expected" ]]; do
-    [[ -z "$expected" ]] && continue
-    [[ "$expected" == \#* ]] && continue
+  while IFS= read -r expected_entry || [[ -n "$expected_entry" ]]; do
+    expected_count=$((expected_count + 1))
+    test_id="${expected_entry%% *}"
+    expected="${expected_entry#* }"
 
-    if ! grep -F -- "$expected" "$out_file" >/dev/null; then
+    if ! grep -Fx -- "$expected" "$out_file" >/dev/null; then
       echo "FAIL $rel_case"
-      echo "  missing expected fact:"
+      echo "  missing expected fact for: $test_id"
       echo "  $expected"
       echo "  output: $out_file"
       failures=$((failures + 1))
       return
     fi
-  done < "$expected_file"
+  done < <(expected_results "$case_file")
+
+  if [[ "$expected_count" -eq 0 ]]; then
+    echo "FAIL $rel_case"
+    echo "  missing EXPECTED-RESULT fact"
+    failures=$((failures + 1))
+    return
+  fi
 
   echo "PASS $rel_case"
 }
 
-while IFS= read -r case_file; do
-  run_case "$case_file"
-done < <(find "$TEST_ROOT" -name "*.test" | sort)
+if [[ "$#" -gt 0 ]]; then
+  for case_file in "$@"; do
+    run_case "$case_file"
+  done
+else
+  while IFS= read -r case_file; do
+    run_case "$case_file"
+  done < <(find "$TEST_ROOT" -name "*-test.metta" | sort)
+fi
 
 echo
 echo "Total: $total"
