@@ -36,20 +36,20 @@
 ;; Empty partition list:
 ;;
 ;;   do-ji-prob(()) = ()
-(exec 16
+(exec 41
     (, (do-ji-prob-request ()))
     (, (do-ji-prob-of () ())))
 
 
 ;; One partition:
-(exec 16
+(exec 41
     (, (do-ji-prob-request ($p1))
        (ji-prob-est-of $p1 $j1))
     (, (do-ji-prob-of ($p1) ($j1))))
 
 
 ;; Two partitions:
-(exec 16
+(exec 41
     (, (do-ji-prob-request ($p1 $p2))
        (ji-prob-est-of $p1 $j1)
        (ji-prob-est-of $p2 $j2))
@@ -57,7 +57,7 @@
 
 
 ;; Three partitions:
-(exec 16
+(exec 41
     (, (do-ji-prob-request ($p1 $p2 $p3))
        (ji-prob-est-of $p1 $j1)
        (ji-prob-est-of $p2 $j2)
@@ -66,7 +66,7 @@
 
 
 ;; Four partitions:
-(exec 16
+(exec 41
     (, (do-ji-prob-request ($p1 $p2 $p3 $p4))
        (ji-prob-est-of $p1 $j1)
        (ji-prob-est-of $p2 $j2)

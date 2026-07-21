@@ -2,7 +2,8 @@
 ;; EQ-prob-only test DB
 ;;
 ;; This file intentionally contains no `(INPUT PATTERN ...)` facts.  It should
-;; exercise only the eq-prob rules in `src/isurp.metta` when loaded together
+;; exercise only the eq-prob rules in `src/isurp_modules/04_eq_prob.metta` when
+;; loaded together with the abstractness sorter
 ;; with that implementation.
 ;;
 ;; Expected active result for the first partition:

@@ -23,21 +23,20 @@
 ;;
 ;; Important current scope:
 ;;
-;;   - Direct variable markers in atom arguments are supported:
+;;   - Direct variable markers in binary predicate atom arguments are supported:
 ;;       (Inheritance (var 0) man)
-;;       (Inheritance (var 0) (var 1) Place)
+;;       (Inheritance man (var 0))
+;;       (Inheritance (var 0) (var 1))
 ;;
-;;   - One-level wrapped variables are also recognized in common nested forms:
-;;       (Inheritance (Person (var 0)) man)
-;;
-;;   - `is-blk-more-abstract` in the PeTTa source is currently a placeholder
-;;     that always returns True.  This MM2 version follows that source behavior
-;;     by treating partition block order as the abstraction order.
+;;   - Abstractness ordering is delegated to `03_abstractness_sort.metta`.
+;;     That module materializes the most abstract block connected to each joint
+;;     variable and exposes its support.
 ;;
 ;; Public result facts produced by this section:
 ;;
 ;;   (eq-joint-var $partition $var)
 ;;   (eq-value-count $partition $block $var $count)
+;;   (abstractness-sort-request $partition $var)
 ;;   (eq-var-factor $partition $var $factor)
 ;;   (eq-prob-of $partition $prob)
 ;;
@@ -105,75 +104,19 @@
 
 ;; get-var / connected-subpatterns-with-var:
 ;;
-;; Scan direct atom arguments for `(var N)` markers.  These rules cover arity
-;; 2, 3, 4, and 5 atoms.  The first element is treated as the link/predicate,
-;; so only argument positions are checked.
-(exec 7
-    (, (eq-block-clause $partition $block ($rel (var $n))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
+;; Scan direct arguments for `(var N)` markers in binary predicate atoms only:
+;;
+;;   ($rel $left $right)
+;;
+;; The first element is treated as the link/predicate, so only the two argument
+;; positions are checked.  This intentionally excludes n-ary predicate atoms
+;; such as `($rel $x $a $b)` and nested wrapper terms.
 (exec 7
     (, (eq-block-clause $partition $block ($rel (var $n) $a)))
     (, (eq-block-has-var $partition $block (var $n))))
 
 (exec 7
     (, (eq-block-clause $partition $block ($rel $a (var $n))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel (var $n) $a $b)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a (var $n) $b)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a $b (var $n))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel (var $n) $a $b $c)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a (var $n) $b $c)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a $b (var $n) $c)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a $b $c (var $n))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-
-;; get-var, nested one-level wrapper support:
-;;
-;; These rules recognize common nested variable terms such as `(Person (var 0))`.
-(exec 7
-    (, (eq-block-clause $partition $block ($rel ($wrap (var $n)))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel ($wrap (var $n)) $a)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a ($wrap (var $n)))))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel ($wrap (var $n)) $a $b)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a ($wrap (var $n)) $b)))
-    (, (eq-block-has-var $partition $block (var $n))))
-
-(exec 7
-    (, (eq-block-clause $partition $block ($rel $a $b ($wrap (var $n)))))
     (, (eq-block-has-var $partition $block (var $n))))
 
 
@@ -244,112 +187,30 @@
 
 ;; calculate-prob-for-vars / process-blocks:
 ;;
-;; The PeTTa source processes sorted connected blocks from j=1 onward and divides
-;; by the value count of the previous, more abstract block.  Since the current
-;; PeTTa `is-blk-more-abstract` is a placeholder that always returns True, this
-;; MM2 port uses the partition order as the sorted order.
+;; The PeTTa source sorts connected blocks by abstractness, then divides by the
+;; value count/support of the previous more abstract block.  In this MM2 port,
+;; `03_abstractness_sort.metta` performs the abstractness choice and writes:
 ;;
-;; Two-block partition factor:
+;;   (most-abstract-block-support $partition $var $block $count)
 ;;
-;;   factor(var) = 1 / value-count(block-1, var)
-(exec 11
-    (, (partition ($b1 $b2))
-       (eq-joint-var ($b1 $b2) $var)
-       (eq-block-has-var ($b1 $b2) $b1 $var)
-       (eq-block-has-var ($b1 $b2) $b2 $var)
-       (eq-value-count ($b1 $b2) $b1 $var $c1))
-    (O
-        (pure
-            (eq-var-factor ($b1 $b2) $var $factor)
-            $factor
-            (f64_to_string
-                (div_f64
-                    (f64_from_string 1.0)
-                    (f64_from_string $c1))))))
-
-;; Supported fallback used by the current MM2 ISurp pipeline:
+;; This rule turns that count into the per-variable equality correction:
 ;;
-;; If a precise `eq-value-count` is not available, use the already computed
-;; `block-support` count for the previous block.  This keeps the correction
-;; integrated with the existing MM2 support-count pipeline.
+;;   factor(var) = 1 / support(most abstract connected block)
 (exec 11
-    (, (partition ($b1 $b2))
-       (eq-joint-var ($b1 $b2) $var)
-       (eq-block-has-var ($b1 $b2) $b1 $var)
-       (eq-block-has-var ($b1 $b2) $b2 $var)
-       (block-support ($b1 $b2) $b1 $c1))
+    (, (eq-joint-var $partition $var))
+    (, (abstractness-sort-request $partition $var)))
+
+(exec 38
+    (, (eq-joint-var $partition $var)
+       (most-abstract-block-support $partition $var $most-abstract-block $count))
     (O
         (pure
-            (eq-var-factor ($b1 $b2) $var $factor)
+            (eq-var-factor $partition $var $factor)
             $factor
             (f64_to_string
                 (div_f64
                     (f64_from_string 1.0)
-                    (f64_from_string $c1))))))
-
-
-;; Three-block adjacent factor, block 1 -> block 2.
-(exec 11
-    (, (partition ($b1 $b2 $b3))
-       (eq-joint-var ($b1 $b2 $b3) $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b1 $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b2 $var)
-       (eq-value-count ($b1 $b2 $b3) $b1 $var $c1))
-    (O
-        (pure
-            (eq-var-factor ($b1 $b2 $b3) $var $factor)
-            $factor
-            (f64_to_string
-                (div_f64
-                    (f64_from_string 1.0)
-                    (f64_from_string $c1))))))
-
-(exec 11
-    (, (partition ($b1 $b2 $b3))
-       (eq-joint-var ($b1 $b2 $b3) $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b1 $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b2 $var)
-       (block-support ($b1 $b2 $b3) $b1 $c1))
-    (O
-        (pure
-            (eq-var-factor ($b1 $b2 $b3) $var $factor)
-            $factor
-            (f64_to_string
-                (div_f64
-                    (f64_from_string 1.0)
-                    (f64_from_string $c1))))))
-
-
-;; Three-block adjacent factor, block 2 -> block 3.
-(exec 11
-    (, (partition ($b1 $b2 $b3))
-       (eq-joint-var ($b1 $b2 $b3) $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b2 $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b3 $var)
-       (eq-value-count ($b1 $b2 $b3) $b2 $var $c2))
-    (O
-        (pure
-            (eq-var-factor ($b1 $b2 $b3) $var $factor)
-            $factor
-            (f64_to_string
-                (div_f64
-                    (f64_from_string 1.0)
-                    (f64_from_string $c2))))))
-
-(exec 11
-    (, (partition ($b1 $b2 $b3))
-       (eq-joint-var ($b1 $b2 $b3) $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b2 $var)
-       (eq-block-has-var ($b1 $b2 $b3) $b3 $var)
-       (block-support ($b1 $b2 $b3) $b2 $c2))
-    (O
-        (pure
-            (eq-var-factor ($b1 $b2 $b3) $var $factor)
-            $factor
-            (f64_to_string
-                (div_f64
-                    (f64_from_string 1.0)
-                    (f64_from_string $c2))))))
+                    (f64_from_string $count))))))
 
 
 ;; eq-prob finalization:
@@ -361,17 +222,16 @@
 
 ;; One-block partitions have no cross-block joint variables, so the correction
 ;; factor is the multiplicative identity.
-(exec 12
+(exec 39
     (, (partition ($b1)))
     (, (eq-prob-of ($b1) 1.0)))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition $v1 $f1))
     (, (eq-prob-of $partition $f1)))
 
-;; Pair products for common indexed variables.  These avoid the `I (!= ...)`
-;; source form because this MORK build panics on that form.
-(exec 12
+
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1))
     (O
@@ -383,7 +243,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f1))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 2) $f2))
     (O
@@ -395,7 +255,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f2))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -407,7 +267,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f3))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2))
     (O
@@ -419,7 +279,7 @@
                     (f64_from_string $f1)
                     (f64_from_string $f2))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -431,7 +291,7 @@
                     (f64_from_string $f1)
                     (f64_from_string $f3))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -443,8 +303,9 @@
                     (f64_from_string $f2)
                     (f64_from_string $f3))))))
 
-;; Triple and four-variable products for the N-ary test patterns.
-(exec 12
+;; Triple and four-variable products for partitions that expose multiple joint
+;; variables across binary predicate clauses.
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2))
@@ -459,7 +320,7 @@
                         (f64_from_string $f1))
                     (f64_from_string $f2))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 3) $f3))
@@ -474,7 +335,7 @@
                         (f64_from_string $f1))
                     (f64_from_string $f3))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
@@ -489,7 +350,7 @@
                         (f64_from_string $f2))
                     (f64_from_string $f3))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
@@ -504,7 +365,7 @@
                         (f64_from_string $f2))
                     (f64_from_string $f3))))))
 
-(exec 12
+(exec 39
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2)
@@ -521,4 +382,3 @@
                     (product_f64
                         (f64_from_string $f2)
                         (f64_from_string $f3)))))))
-

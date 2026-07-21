@@ -1,14 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ISurp in MM2
 ;;
-;; This file is a single-file MM2 implementation of the current `isurp-old`
-;; pipeline from:
+;; This file contains reusable definitions for the modular ISurp pipeline
+;; translated from:
 ;;
 ;;   ../../hyperon-miner/experiments/surprisingness/isurp-old.metta
 ;;
-;; The implementation is written as staged MM2 `exec` transactions.  A MeTTa
-;; function call such as `(isurp-old pattern db normalize)` becomes a dataflow
-;; pipeline:
+;; The implementation is split across `src/isurp_modules/*.metta` as staged MM2
+;; `exec` transactions.  A MeTTa function call becomes a dataflow pipeline:
 ;;
 ;;   input pattern/support
 ;;   -> total count
@@ -48,23 +47,18 @@
 ;;                        (Inheritance $x ugly)
 ;;                        (Inheritance $x sodaDrinker)) 5))
 ;;
-;; Output:
+;; Final modular output:
 ;;
-;;     (isurp-of $pattern $value)
+;;     (isurp-new-of $pattern $value)
 ;;
 ;; Important:
 ;;
 ;;   Running this file by itself is only a syntax/load check.  Because this file
-;;   intentionally contains no `(INPUT ...)` facts or DB atoms, `mork run
-;;   src/isurp.metta` will finish with only the reusable function definitions in
-;;   the result space.
+;;   intentionally contains no `(INPUT ...)` facts or DB atoms, it will finish
+;;   with only the reusable function definitions in the result space.
 ;;
-;; Compatibility note:
-;;
-;;   This file intentionally keeps the currently validated algorithm from
-;;   `src/surp.metta`, but gives the output a cleaner name: `isurp-of`.
-;;   The product/range stage is still explicit for 3-conjunct old-isurp
-;;   patterns, which is the currently validated case.
+;; This file only holds reusable definitions.  Load it with the remaining
+;; modules to run the full pipeline.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -215,5 +209,3 @@
                 (le_f64
                     (f64_from_string $emp)
                     (f64_from_string $emax))))))
-
-

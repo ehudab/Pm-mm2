@@ -26,7 +26,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(exec 15
+(exec 40
     (, (pro-prob-wout-joint-of $partition $independent-prob)
        (eq-prob-of $partition $eq-prob))
     (O
