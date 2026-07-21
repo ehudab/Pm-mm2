@@ -13,7 +13,7 @@ Everything is stored as facts in the same space:
 ```metta
 (Inheritance Allen man)
 (INPUT DB db)
-(exec 0 $sources $sinks)
+(exec (freq 010 example) $sources $sinks)
 ((count-conjuncts $pattern -> num-of-conjuncts) $src $sink)
 ```
 
@@ -39,13 +39,16 @@ The fields are:
 
 | Field | Purpose | Example |
 | --- | --- | --- |
-| `$module` | Namespace for the project module that owns the rule | `surp`, `freq`, `shared`, `debug` |
+| `$module` | One of the two project modules that owns the rule | `surp`, `freq` |
 | `$stage` | Primary ordering key inside the module; exactly three decimal digits | `010`, `020`, `100`, `900` |
 | `$label` | Human-readable stage name | `init`, `index-pattern`, `cleanup` |
 
 Example:
 
 ```metta
+(exec (freq 010 normalize-seeds) ...)
+(exec (freq 110 count-support) ...)
+(exec (freq 900 cleanup-bases) ...)
 (exec (surp 010 init) ...)
 (exec (surp 020 index-pattern) ...)
 (exec (surp 090 product-2) ...)
@@ -53,6 +56,15 @@ Example:
 (exec (surp 100 interval) ...)
 (exec (surp 900 cleanup) ...)
 ```
+
+The project has exactly two module namespaces:
+
+- `freq` owns frequent mining, including connected conjunction expansion.
+- `surp` owns surprisingness scoring.
+
+Helpers, cleanup, tracing, and debugging remain stages inside their owning
+module. They do not introduce `shared`, `debug`, `conj-exp`, or similar module
+names.
 
 Do not use bare natural priorities in project code:
 
@@ -100,7 +112,7 @@ Use explicit predicates to make each fact type clear.
 | Database facts | Facts being mined | `(Inheritance Allen man)` |
 | Function definitions | Reusable pipeline definitions | `((count-conjuncts ... -> ...) $src $sink)` |
 | Intermediate facts | Temporary pipeline state | `(block-support $partition $block $support)` |
-| Final results | Intended output | `(surprisingness-of $pattern $score)` |
+| Final results | Intended output | `(frequent-pattern $pattern $support)`, `(surprisingness-of $pattern $score)` |
 | Debug facts | Temporary inspection facts | `(DEBUG stage value)` |
 | Dummy facts | Development-only facts | `(DUMMY ...)` |
 
@@ -151,7 +163,7 @@ Selected DB input:
 Early materialization step:
 
 ```metta
-(exec 0
+(exec (freq 010 materialize-db)
     (, (INPUT DB $db) (db-fact $db $fact))
     (O
         (+ $fact)))
@@ -185,6 +197,8 @@ Use `INPUT` facts for miner configuration inputs.
                    (Inheritance $a ugly)
                    (Inheritance $a man)) 4))
 (INPUT NORMALIZATION TRUE)
+(INPUT MIN-SUPPORT 3)
+(INPUT MAX-SIZE 3)
 ```
 
 
@@ -250,10 +264,10 @@ Example:
 A caller can specialize it by matching the definition and spawning the returned exec:
 
 ```metta
-(exec 0
+(exec (freq 020 call-count-conjuncts)
     (, ((count-conjuncts $pattern -> num-of-conjuncts) $src $sink))
     (O
-        (+ (exec 0 $src $sink))))
+        (+ (exec (freq 030 count-conjuncts) $src $sink))))
 ```
 
 ### Internal Reusable Definitions
@@ -263,8 +277,8 @@ Use `DEF` for internal reusable rule bodies, recursive walkers, helper expansion
 Example:
 
 ```metta
-(DEF gv-expand
-  (, (gv-visit $id $path $node))
+(DEF freq-scan-fn
+  (, (freq-scan $id $path $node))
   (O
     ...))
 ```

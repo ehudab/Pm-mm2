@@ -25,13 +25,13 @@ The runner reads `TEST-AUX` comments, runs MORK, then checks that every
 1. Create a test file under `tests/<module>/`.
 
 ```text
-tests/frequent-miner/basic-test.metta
+tests/frequent-miner/conjunction-expansion-test.metta
 ```
 
 2. Add the required data and source files as aux paths.
 
 ```metta
-;; TEST-AUX data/frequent-miner-basic.metta
+;; TEST-AUX data/frequent-miner/conjunction-expansion.metta
 ;; TEST-AUX src/frequent-miner.metta
 ```
 
@@ -45,7 +45,7 @@ tests/frequent-miner/basic-test.metta
 4. Add one or more expected results.
 
 ```metta
-(EXPECTED-RESULT frequent-miner-basic (frequent-pattern (, (Inheritance $x human)) 10))
+(EXPECTED-RESULT conjunction-expansion-singleton (frequent-pattern (, (Inheritance $x human)) 10))
 ```
 
 The first argument after `EXPECTED-RESULT` is the test identifier. The second
@@ -60,6 +60,5 @@ scripts/run-tests.sh
 6. Or run only the new test.
 
 ```sh
-scripts/run-tests.sh tests/frequent-miner/basic-test.metta
+scripts/run-tests.sh tests/frequent-miner/conjunction-expansion-test.metta
 ```
-
