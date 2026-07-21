@@ -89,7 +89,7 @@
          (O
            (- (gap-wait $sel-id $path $parent $arg))
            (pure (gap-value $sel-id $path $value) $value
-             (index-atom (' $parent-value) $index))
+             (index-atom $index (' $parent-value)))
            (+ (exec (GAP 0 select) $select-p $select-t)))))
 
     (+ (exec (GAP 9 result)
@@ -243,13 +243,13 @@
 )
 
 ; Example call, kept inactive:
-; (valuation val-example kb-example (Inheritance $x human))
-; (knowledge-base kb-example c1 (Inheritance Allen human))
-; (knowledge-base kb-example c2 (Inheritance Lily human))
-; (knowledge-base kb-example c3 (Inheritance Allen sodaDrinker))
-; (exec (VAL 0 call-example)
-;   (, (valuation val-example kb-example (Inheritance $x human))
-;      (DEF valuation-fn $val-p $val-t))
-;   (O (+ (exec (VAL 0 run-valuation) $val-p $val-t))))
+(valuation val-example kb-example (Inheritance $x human))
+(knowledge-base kb-example c1 (Inheritance Allen human))
+(knowledge-base kb-example c2 (Inheritance Lily human))
+(knowledge-base kb-example c3 (Inheritance Allen sodaDrinker))
+(exec (VAL 0 call-example)
+  (, (valuation val-example kb-example (Inheritance $x human))
+     (DEF valuation-fn $val-p $val-t))
+  (O (+ (exec (VAL 0 run-valuation) $val-p $val-t))))
 
 
