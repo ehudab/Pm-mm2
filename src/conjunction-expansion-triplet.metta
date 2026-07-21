@@ -75,17 +75,11 @@
 ;; connected raw candidate has been emitted.
 (DEF ce-schedule-candidate-result-fn
     (, (ce-raw-candidate $old-size $raw)
-       (DEF ce-sort-candidate-fn $sort-candidate-p $sort-candidate-t)
-       (DEF ce-candidate-to-vars-fn $candidate-vars-p $candidate-vars-t)
-       (DEF ce-alpha-candidate-fn $alpha-candidate-p $alpha-candidate-t)
        (DEF ce-candidate-size-fn $candidate-size-p $candidate-size-t)
        (DEF ce-candidate-pass-fn $candidate-pass-p $candidate-pass-t)
        (DEF ce-queue-candidate-fn $queue-candidate-p $queue-candidate-t)
        (DEF ce-drop-candidate-fn $drop-candidate-p $drop-candidate-t))
     (O
-        (+ (exec (CE 6 1) $sort-candidate-p $sort-candidate-t))
-        (+ (exec (CE 6 2) $candidate-vars-p $candidate-vars-t))
-        (+ (exec (CE 6 3) $alpha-candidate-p $alpha-candidate-t))
         (+ (exec (CE 6 4) $candidate-size-p $candidate-size-t))
         (+ (exec (CE 6 6) $candidate-pass-p $candidate-pass-t))
         (+ (exec (CE 6 7) $queue-candidate-p $queue-candidate-t))
@@ -273,12 +267,12 @@
             (ce-conjunct-var-check
                 $old-size $conjunct $base $left $left-is-var)
             $left-is-var
-            (i8_to_string (is_var ( $left))))
+            (i8_to_string (is_var ( ' $left))))
         (pure
             (ce-conjunct-var-check
                 $old-size $conjunct $base $right $right-is-var)
             $right-is-var
-            (i8_to_string (is_var ($right)))
+            (i8_to_string (is_var (' $right)))
         
         )
         (- (ce-conjunct-atom
@@ -302,6 +296,13 @@
         (- (ce-base-right-check
             $old-size $conjunct $base $right-is-var))))
 
+(DEF ce-existing-choice-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-conjunct-var-check $old-size $conjunct $base $var 1))
+    (O
+        (+ (ce-var-choice $old-size $conjunct $base $var existing))
+        (- (ce-conjunct-var-check
+            $old-size $conjunct $base $var 1))))
 
 (DEF ce-drop-non-var-fn
     (, (ce-expand-todo $old-size $conjunct)
@@ -316,7 +317,8 @@
 ;; single next variable marker, with no depth-sized successor table.
 (DEF ce-fresh-candidate-fn
     (, (ce-expand-todo $old-size $conjunct)
-      (ce-conjunct-var-check $old-size $conjunct $base (var $index) 1))
+       (ce-var-choice
+           $old-size $conjunct $base (var $index) existing))
     (O
         (pure
             (ce-fresh-candidate
@@ -325,11 +327,7 @@
             (i32_to_string
                 (sum_i32
                     (i32_from_string $index)
-                    (i32_one))))
-                (- (ce-conjunct-var-check
-            $old-size $conjunct $base $var 1))
-                
-                ))
+                    (i32_one))))))
 
 (DEF ce-drop-existing-fresh-fn
     (, (ce-expand-todo $old-size $conjunct)
