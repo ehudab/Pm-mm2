@@ -1,4 +1,4 @@
-name: Tests
+name: hyperon-miner-mm2
 
 on:
   pull_request:
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   mm2-tests:
-    name: MM2 tests
+    name: hyperon-miner-mm2-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
