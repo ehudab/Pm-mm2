@@ -49,11 +49,12 @@
 (DEF ce-schedule-support-filter-fn
     (, (ce-support $size $candidate $support)
        (DEF ce-support-pass-fn $support-pass-p $support-pass-t)
-       (DEF ce-save-pass-fn $save-pass-p $save-pass-t))
-    
+       (DEF ce-save-pass-fn $save-pass-p $save-pass-t)
+       (DEF ce-drop-fail-fn $drop-fail-p $drop-fail-t))
     (O
         (+ (exec (CE 2 2) $support-pass-p $support-pass-t))
-        (+ (exec (CE 2 3) $save-pass-p $save-pass-t))    ))
+        (+ (exec (CE 2 3) $save-pass-p $save-pass-t))
+        (+ (exec (CE 2 4) $drop-fail-p $drop-fail-t))))
 
 ;; Schedule depth checking and expansion queueing for every frequent conjunct.
 (DEF ce-schedule-expansion-check-fn
@@ -65,21 +66,21 @@
         (+ (exec (CE 3 2) $expand-pass-p $expand-pass-t))
         (+ (exec (CE 3 3) $expand-todo-p $expand-todo-t))
         (+ (exec (CE 3 4) $drop-expand-p $drop-expand-t))))
-  (DEF ce-drop-candidate-fn
-    (, (ce-candidate-depth-pass $candidate $size $depth-pass)
-       (ce-candidate-growth-pass $candidate $size $growth-pass))
-    (O
-        (- (ce-candidate-depth-pass $candidate $size $depth-pass))
-        (- (ce-candidate-growth-pass $candidate $size $growth-pass))))
 ;; Start the trusted canonicalize/size/filter/queue chain only after every
 ;; connected raw candidate has been emitted.
 (DEF ce-schedule-candidate-result-fn
     (, (ce-raw-candidate $old-size $raw)
+       (DEF ce-sort-candidate-fn $sort-candidate-p $sort-candidate-t)
+       (DEF ce-candidate-to-vars-fn $candidate-vars-p $candidate-vars-t)
+       (DEF ce-alpha-candidate-fn $alpha-candidate-p $alpha-candidate-t)
        (DEF ce-candidate-size-fn $candidate-size-p $candidate-size-t)
        (DEF ce-candidate-pass-fn $candidate-pass-p $candidate-pass-t)
        (DEF ce-queue-candidate-fn $queue-candidate-p $queue-candidate-t)
        (DEF ce-drop-candidate-fn $drop-candidate-p $drop-candidate-t))
     (O
+        (+ (exec (CE 6 1) $sort-candidate-p $sort-candidate-t))
+        (+ (exec (CE 6 2) $candidate-vars-p $candidate-vars-t))
+        (+ (exec (CE 6 3) $alpha-candidate-p $alpha-candidate-t))
         (+ (exec (CE 6 4) $candidate-size-p $candidate-size-t))
         (+ (exec (CE 6 6) $candidate-pass-p $candidate-pass-t))
         (+ (exec (CE 6 7) $queue-candidate-p $queue-candidate-t))
@@ -90,15 +91,16 @@
 
 
 (DEF ce-support-pass-fn
-    (,(ce-support $size $candidate $support)
-       (support-threshold $threshold)
-    )
+    (, (ce-support $size $candidate $support)
+       (support-threshold $threshold))
     (O
         (pure
             (ce-support-pass $size $candidate $support $pass)
             $pass
-            (ge_i32  (i32_from_string $support)  (i32_from_string  $threshold)))
-     (ce-support $size $candidate $support)))
+            (ge_i32
+                (i32_from_string $support)
+                (i32_from_string $threshold)))
+        (- (ce-support $size $candidate $support))))
 ;; Save every frequent conjunct. These facts are the component's main output.
 (DEF ce-save-pass-fn
     (, (ce-support-pass $size $candidate $support true))
@@ -107,6 +109,12 @@
         (+ (expanded-conjunct $size $candidate $support))
         (+ (ce-expand-check $size $candidate $support))
         (- (ce-support-pass $size $candidate $support true))))
+
+;; Drop candidates that did not pass the support threshold.
+(DEF ce-drop-fail-fn
+    (, (ce-support-pass $size $candidate $support false))
+    (O
+        (- (ce-support-pass $size $candidate $support false))))
 ;; Only conjuncts smaller than depth-of-conjunct are expanded further.
 (DEF ce-expand-pass-fn
     (, (ce-expand-check $size $candidate $support)
@@ -202,11 +210,19 @@
     (, (ce-expand-todo $old-size $conjunct)
        (DEF ce-build-connected-base-fn $connected-base-p $connected-base-t)
        (DEF ce-build-raw-candidate-fn $raw-candidate-p $raw-candidate-t)
-       (DEF ce-cleanup-var-choice-fn $cleanup-var-choice-p $cleanup-var-choice-t))
+       (DEF ce-cleanup-var-choice-fn $cleanup-var-choice-p $cleanup-var-choice-t)
+       (DEF ce-cleanup-base-shape-fn $cleanup-base-shape-p $cleanup-base-shape-t)
+       (DEF ce-cleanup-source-relation-fn $cleanup-source-relation-p $cleanup-source-relation-t)
+       (DEF ce-cleanup-expand-pair-fn $cleanup-expand-pair-p $cleanup-expand-pair-t)
+       (DEF ce-finish-expansion-fn $finish-expansion-p $finish-expansion-t))
     (O
         (+ (exec (CE 5 6) $connected-base-p $connected-base-t))
         (+ (exec (CE 5 7) $raw-candidate-p $raw-candidate-t))
-        (+ (exec (CE 5 8) $cleanup-var-choice-p $cleanup-var-choice-t))))
+        (+ (exec (CE 5 8) $cleanup-var-choice-p $cleanup-var-choice-t))
+        (+ (exec (CE 5 8) $cleanup-base-shape-p $cleanup-base-shape-t))
+        (+ (exec (CE 5 8) $cleanup-source-relation-p $cleanup-source-relation-t))
+        (+ (exec (CE 5 9) $cleanup-expand-pair-p $cleanup-expand-pair-t))
+        (+ (exec (CE 6 0) $finish-expansion-p $finish-expansion-t))))
 ;; Pair every expandable conjunct with every normalized base pattern.
 ;; create pair with the posible one only not with all 
 ;; Merged function that pairs AND filters in one step  
@@ -228,7 +244,26 @@
             $conjunct
             ($predicate $base-left $base-right)
             $conjunct))
-))
+        (pure
+            (ce-base-left-check
+                $old-size
+                $conjunct
+                ($predicate $base-left $base-right)
+                $left-is-var)
+            $left-is-var
+            (i8_to_string (is_var (' $base-left))))
+        (pure
+            (ce-base-right-check
+                $old-size
+                $conjunct
+                ($predicate $base-left $base-right)
+                $right-is-var)
+            $right-is-var
+            (i8_to_string (is_var (' $base-right))))
+        (- (ce-expand-pair
+            $old-size
+            $conjunct
+            ($predicate $base-left $base-right)))))
 ;; Emit the head atom, replace the remaining list with its tail, and schedule
 ;; another pass. car-atom/cdr-atom fail on the empty tail; that last pass only
 ;; removes the exhausted cursor and lets the next scheduler stage begin.
@@ -346,18 +381,39 @@
 
 
     
-;; For a two-variable base, remember whether both slots came from the same
-;; source variable. Equal source variables must remain equal after replacement.
-
-(DEF ce-base-source-relation-fn
+;; Stage both numeric marker IDs while retaining the exact base as the join key.
+(DEF ce-base-source-indices-to-i32-fn
     (, (ce-expand-todo $old-size $conjunct)
-     (ce-base-shape
+       (ce-base-shape
            $old-size
            $conjunct
            ($predicate (var $left-index) (var $right-index))
            1
-           1)
-    )
+           1))
+    (O
+        (pure
+            (ce-base-source-left-i32
+                $old-size
+                $conjunct
+                ($predicate (var $left-index) (var $right-index))
+                $left-i32)
+            $left-i32
+            (i32_from_string $left-index))
+        (pure
+            (ce-base-source-right-i32
+                $old-size
+                $conjunct
+                ($predicate (var $left-index) (var $right-index))
+                $right-i32)
+            $right-i32
+            (i32_from_string $right-index))))
+
+;; For a two-variable base, remember whether both slots came from the same
+;; source variable. Equal source variables must remain equal after replacement.
+(DEF ce-base-source-relation-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-base-source-left-i32 $old-size $conjunct $base $left-i32)
+       (ce-base-source-right-i32 $old-size $conjunct $base $right-i32))
     (O
         (pure
             (ce-base-source-same
@@ -366,7 +422,11 @@
                 $base
                 $same)
             $same
-            (eq_i32  (i32_from_string $left-index) (i32_from_string $right-index))) ))
+            (eq_i32 $left-i32 $right-i32))
+        (- (ce-base-source-left-i32
+            $old-size $conjunct $base $left-i32))
+        (- (ce-base-source-right-i32
+            $old-size $conjunct $base $right-i32))))
 
 ;; A repeated source variable has one choice shared by both output positions.
 (DEF ce-build-same-var-map-fn
@@ -535,35 +595,80 @@
 ;; is removed last, including when an expansion produced no connected variant.
 (DEF ce-cleanup-var-choice-fn
     (, (ce-expand-todo $old-size $conjunct)
-       (ce-var-choice $old-size $conjunct $base $var $kind)
-       (ce-base-shape $old-size $conjunct $base $left-is-var $right-is-var) 
-       (ce-base-source-same $old-size $conjunct $base $same) 
-       (ce-expand-pair $old-size $conjunct $base)
-       )
+       (ce-var-choice $old-size $conjunct $base $var $kind))
     (O
-        (- (ce-var-choice $old-size $conjunct $base $var $kind))
-        (- (ce-base-shape $old-size $conjunct $base $left-is-var $right-is-var))
-        (- (ce-base-source-same $old-size $conjunct $base $same))
-        (- (ce-expand-pair $old-size $conjunct $base))
-         (- (ce-expand-todo $old-size $conjunct))
+        (- (ce-var-choice
+            $old-size $conjunct $base $var $kind))))
 
-             ) )
-;; Re-index the sorted candidate by first variable occurrence. Alpha-equivalent
-;; Record the candidate's new size.
+(DEF ce-cleanup-base-shape-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-base-shape
+           $old-size $conjunct $base $left-is-var $right-is-var))
+    (O
+        (- (ce-base-shape
+            $old-size $conjunct $base $left-is-var $right-is-var))))
+
+(DEF ce-cleanup-source-relation-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-base-source-same $old-size $conjunct $base $same))
+    (O
+        (- (ce-base-source-same
+            $old-size $conjunct $base $same))))
+
+;; Valid triplet pairs are consumed by ce-expand-pair-details-fn. This catches
+;; malformed/non-triplet pairs so they cannot remain in the output space.
+(DEF ce-cleanup-expand-pair-fn
+    (, (ce-expand-todo $old-size $conjunct)
+       (ce-expand-pair $old-size $conjunct $base))
+    (O
+        (- (ce-expand-pair $old-size $conjunct $base))))
+
+;; Remove the expansion guard only after every pair-scoped cleanup stage ran.
+(DEF ce-finish-expansion-fn
+    (, (ce-expand-todo $old-size $conjunct))
+    (O
+        (- (ce-expand-todo $old-size $conjunct))))
+;; Sort candidate atoms so conjunction order does not create duplicates.
+(DEF ce-sort-candidate-fn
+    (, (ce-raw-candidate $old-size $raw))
+    (O
+        (pure
+            (ce-sorted-candidate $old-size $sorted)
+            $sorted
+            (sort-atom (' $raw)))
+        (- (ce-raw-candidate $old-size $raw))))
+
+;; Convert indexed markers to variables after sorting so first occurrence
+;; defines one stable alpha-normalization order.
+(DEF ce-candidate-to-vars-fn
+    (, (ce-sorted-candidate $old-size $sorted))
+    (O
+        (pure
+            (ce-candidate-vars $old-size $as-vars)
+            $as-vars
+            (indices_to_vars (' $sorted)))
+        (- (ce-sorted-candidate $old-size $sorted))))
+
+;; Re-index the sorted candidate. Alpha-equivalent candidates now become the
+;; same exact fact before size and support scheduling.
+(DEF ce-alpha-candidate-fn
+    (, (ce-candidate-vars $old-size $as-vars))
+    (O
+        (pure
+            (ce-candidate $old-size $candidate)
+            $candidate
+            (vars_to_indices (' $as-vars)))
+        (- (ce-candidate-vars $old-size $as-vars))))
+
+;; Record the canonical candidate's new size.
 (DEF ce-candidate-size-fn
-   (,(ce-raw-candidate $old-size $raw))
+    (, (ce-candidate $old-size $candidate))
     (O
         (pure
             (ce-candidate-size $old-size $candidate $size)
             $size
-            (size-atom (' (vars_to_indices (' 
-              (indices_to_vars 
-                ('  (sort-atom (' $raw))))
-            ))
-        )))
- (- (ce-raw-candidate $old-size $raw)))    )
-
-
+            (size-atom (' $candidate)))
+        (- (ce-candidate $old-size $candidate))))
 
 ;; Keep only candidates that actually grew and are within depth-of-conjunct.
 (DEF ce-candidate-pass-fn
@@ -590,13 +695,13 @@
         (- (ce-candidate-depth-pass $candidate $size true))
         (- (ce-candidate-growth-pass $candidate $size true))))
 
-;; Drop candidates that exceed max depth or did not grow.
+;; Drop frequent conjuncts that are already at max depth.
 (DEF ce-drop-expand-fn
-    (, (ce-expand-pass $size $candidate false)
-       (ce-support-pass $size $candidate $support false))
+    (, (ce-expand-pass $size $candidate false))
     (O
-        (- (ce-support-pass $size $candidate $support false))
-        (- (ce-expand-pass $size $candidate false)))) 
+        (- (ce-expand-pass $size $candidate false))))
+
+;; Drop candidates that exceed max depth or did not grow.
 (DEF ce-drop-candidate-fn
     (, (ce-candidate-depth-pass $candidate $size $depth-pass)
        (ce-candidate-growth-pass $candidate $size $growth-pass))
@@ -667,5 +772,3 @@
 (Inheritance Dana human)
 (Inheritance Dana ugly)
 (Inheritance Dana sodaDrinker)
-
-
