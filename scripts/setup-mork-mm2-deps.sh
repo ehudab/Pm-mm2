@@ -12,13 +12,14 @@ STDLIB_DIR="$(cd "$3" && pwd)"
 
 LIB_RS="$MORK_DIR/kernel/src/lib.rs"
 SINKS_RS="$MORK_DIR/kernel/src/sinks.rs"
+SPACE_RS="$MORK_DIR/kernel/src/space.rs"
 KERNEL_CARGO="$MORK_DIR/kernel/Cargo.toml"
 WORKSPACE_CARGO="$MORK_DIR/Cargo.toml"
 MACROS_RS="$MORK_DIR/expr/src/macros.rs"
 HELPER_EXT_SRC="$HELPER_DIR/helper_ext.rs"
 HELPER_EXT_DST="$MORK_DIR/kernel/src/helper_ext.rs"
 
-for file in "$LIB_RS" "$SINKS_RS" "$KERNEL_CARGO" "$WORKSPACE_CARGO" "$MACROS_RS" "$HELPER_EXT_SRC"; do
+for file in "$LIB_RS" "$SINKS_RS" "$SPACE_RS" "$KERNEL_CARGO" "$WORKSPACE_CARGO" "$MACROS_RS" "$HELPER_EXT_SRC"; do
   if [[ ! -f "$file" ]]; then
     echo "ERROR: expected file missing: $file" >&2
     exit 1
@@ -123,6 +124,21 @@ if "impl DeserializableExpr for bool" not in text:
         raise SystemExit(f"ERROR: could not find insertion marker in {path}")
     text = text.replace(marker, block + marker, 1)
     path.write_text(text)
+PY
+
+python3 - "$SPACE_RS" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+old = '        }, _err => return Err("exec shape (exec <loc> <patterns> <templates>)"))\n    }\n'
+new = '        }, _err => return Err("exec shape (exec <loc> <patterns> <templates>)"));\n    }\n'
+if old in text:
+    text = text.replace(old, new, 1)
+elif new not in text:
+    raise SystemExit(f"ERROR: could not patch destruct macro semicolon in {path}")
+path.write_text(text)
 PY
 
 echo "MORK MM2 dependencies are wired:"
