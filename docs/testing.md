@@ -63,3 +63,17 @@ scripts/run-tests.sh
 scripts/run-tests.sh tests/frequent-miner/basic-test.metta
 ```
 
+## Optional Step Limit
+
+Most tests do not need to define a step limit. The runner has a default safety
+limit so accidental loops do not run forever.
+
+If a test needs a custom maximum number of MM2 execution transitions, add:
+
+```metta
+;; TEST-STEPS 50000
+```
+
+Use this only when the default runner behavior is not enough for that specific
+test.
+

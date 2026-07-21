@@ -1,0 +1,109 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      mork_ref:
+        description: MORK branch, tag, or commit to test with
+        required: false
+        default: main
+      pathmap_ref:
+        description: PathMap branch, tag, or commit to test with
+        required: false
+        default: master
+      mm2_helper_ref:
+        description: MM2-Helper branch, tag, or commit to test with
+        required: false
+        default: main
+      mm2_stdlib_ref:
+        description: mm2-stdlib branch, tag, or commit to test with
+        required: false
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  mm2-tests:
+    name: MM2 tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Hyperon Miner MM2
+        uses: actions/checkout@v4
+        with:
+          path: hyperon-miner-mm2
+
+      - name: Checkout PathMap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.PATHMAP_REPOSITORY || 'Adam-Vandervorst/PathMap' }}
+          ref: ${{ github.event.inputs.pathmap_ref || vars.PATHMAP_REF || 'master' }}
+          path: PathMap
+
+      - name: Checkout MORK
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.MORK_REPOSITORY || 'trueagi-io/MORK' }}
+          ref: ${{ github.event.inputs.mork_ref || vars.MORK_REF || 'main' }}
+          path: MORK
+
+      - name: Checkout MM2-Helper
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.MM2_HELPER_REPOSITORY || 'iCog-Labs-Dev/MM2-Helper' }}
+          ref: ${{ github.event.inputs.mm2_helper_ref || vars.MM2_HELPER_REF || 'main' }}
+          path: MM2-Helper
+
+      - name: Checkout mm2-stdlib
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.MM2_STDLIB_REPOSITORY || 'tezena/mm2-stdlib' }}
+          ref: ${{ github.event.inputs.mm2_stdlib_ref || vars.MM2_STDLIB_REF || 'main' }}
+          path: mm2-stdlib
+
+      - name: Install Rust nightly
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup default nightly
+
+      - name: Cache Cargo build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+            MORK/target
+            PathMap/target
+            mm2-stdlib/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('MORK/Cargo.lock', 'PathMap/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Wire MM2 helper dependencies into MORK
+        run: hyperon-miner-mm2/scripts/setup-mork-mm2-deps.sh MORK MM2-Helper mm2-stdlib
+
+      - name: Build MORK CLI
+        working-directory: MORK/kernel
+        run: cargo +nightly build --release
+
+      - name: Run MM2 tests
+        working-directory: hyperon-miner-mm2
+        env:
+          MORK_BIN: ${{ github.workspace }}/MORK/target/release/mork
+        run: scripts/run-tests.sh
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mm2-test-output
+          path: /tmp/hyperon-miner-mm2-tests
+          if-no-files-found: ignore
