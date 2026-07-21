@@ -46,9 +46,29 @@ else
   exit 1
 fi
 
-stdlib_path="$(printf '%s' "$STDLIB_DIR" | sed 's/[\/&]/\\&/g')"
-perl -0pi -e 's/^mm2-stdlib\s*=.*\n//mg' "$KERNEL_CARGO"
-perl -0pi -e "s/pathmap = \\{ workspace = true, features = \\[\"nightly\"\\] \\}\\n/\\0mm2-stdlib = { path = \"$stdlib_path\" }\\n/" "$KERNEL_CARGO"
+python3 - "$KERNEL_CARGO" "$STDLIB_DIR" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+stdlib_path = sys.argv[2]
+dependency = f'mm2-stdlib = {{ path = "{stdlib_path}" }}'
+lines = path.read_text().splitlines()
+
+filtered = [
+    line for line in lines
+    if not line.strip().startswith("mm2-stdlib")
+]
+
+for index, line in enumerate(filtered):
+    if line.strip() == 'pathmap = { workspace = true, features = ["nightly"] }':
+        filtered.insert(index + 1, dependency)
+        break
+else:
+    raise SystemExit(f"ERROR: could not find pathmap dependency in {path}")
+
+path.write_text("\n".join(filtered) + "\n")
+PY
 
 if ! grep -q '^\[patch\."https://github.com/trueagi-io/MORK"\]' "$WORKSPACE_CARGO"; then
   cat >> "$WORKSPACE_CARGO" <<'PATCH'
