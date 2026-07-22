@@ -29,6 +29,11 @@
            (+ (gv-visit $split-id ($split-path arg/1) $b))
            (+ (gv-visit $split-id ($split-path arg/2) $c))
            (+ (exec (freq 020 gv-expand) $expand-p $expand-t)))))
+
+    (+ (exec (freq 039 gv-discard-non-var)
+         (, (gv-var-check $discard-id $discard-path $node 0))
+         (O
+           (- (gv-var-check $discard-id $discard-path $node 0)))))
   )
 )
 
@@ -43,6 +48,7 @@
   (, (get-vars-for-tree $id $tree)
      (DEF gv-expand $expand-p $expand-t))
   (O
+    (- (get-vars-for-tree $id $tree))
     (pure (gv-visit $id root $indexed-tree) $indexed-tree
       (vars_to_indices (' $tree)))
     (+ (exec (freq 020 gv-expand) $expand-p $expand-t)))
@@ -88,6 +94,7 @@
             (DEF get-value-at-position-select $select-p $select-t))
          (O
            (- (gap-wait $sel-id $path $parent $arg))
+           (- (gap-value $sel-id $parent $parent-value))
            (pure (gap-value $sel-id $path $value) $value
              (index-atom $index (' $parent-value)))
            (+ (exec (freq 120 gap-select) $select-p $select-t)))))
@@ -97,6 +104,7 @@
             (gap-target $result-id $result-path))
          (O
            (- (gap-target $result-id $result-path))
+           (- (gap-value $result-id $result-path $result-value))
            (+ (get-value-at-position-result $result-id $result-path $result-value)))))
   )
 )
@@ -134,11 +142,11 @@
   (, (get-value-at-position $id $expr $path)
      (DEF get-value-at-position-step $step-p $step-t))
   (O
+    (- (get-value-at-position $id $expr $path))
     (+ (gap-target $id $path))
     (+ (gap-task $id $expr $path))
     (+ (exec (freq 100 gap-step) $step-p $step-t)))
 )
-
 ; Example call, kept inactive:
 ; (get-value-at-position gap-example
 ;   (Inheritance Allen (Evaluation (Var 1) (like (we sodaDrinker) dean)))
@@ -174,6 +182,7 @@
 (DEF valuation-start
   (, (valuation $id $pattern))
   (O
+    (- (valuation $id $pattern))
     (+ (get-vars-for-tree (VAL-VARS $id) $pattern))
     (+ (valuation-pattern $id $pattern)))
 )
@@ -197,22 +206,17 @@
     (+ (get-value-at-position (VAL-VALUE $id $candidate-expr $path)
          $candidate-expr
          $path))
+    (- (get-vars-for-tree-result (VAL-VARS $id) $path $var))
+    (- (valuation-satisfying-set $id $candidate-expr))
     (+ (exec (freq 231 valuation-get-value) $gap-p $gap-t)))
 )
 
 (DEF valuation-binding-finish
-  (, (gap-valuation-binding (VAL-VALUE $id $candidate-expr $path)
-       $id
-       $path
-       $var)
-     (get-value-at-position-result (VAL-VALUE $id $candidate-expr $path)
-       $path
-       $value))
+  (, (gap-valuation-binding (VAL-VALUE $id $candidate-expr $path) $id $path $var)
+     (get-value-at-position-result (VAL-VALUE $id $candidate-expr $path) $path $value))
   (O
-    (- (gap-valuation-binding (VAL-VALUE $id $candidate-expr $path)
-         $id
-         $path
-         $var))
+    (- (gap-valuation-binding (VAL-VALUE $id $candidate-expr $path) $id $path $var))
+    (- (get-value-at-position-result (VAL-VALUE $id $candidate-expr $path) $path $value))
     (+ (valuation-binding $id $path $var $value)))
 )
 
@@ -240,11 +244,11 @@
 )
 
 ; Example call, kept inactive:
-(valuation val-example (Inheritance $x $y))
-(FACT (Inheritance Allen human))
-(FACT (Inheritance Lily human))
-(FACT (Inheritance Allen sodaDrinker))
-(exec (freq 000 call-example)
-  (, (valuation val-example (Inheritance $x human))
-     (DEF valuation-fn $val-p $val-t))
-  (O (+ (exec (freq 001 run-valuation) $val-p $val-t))))
+; (valuation val-example (Inheritance $x $y))
+; (FACT (Inheritance Allen human))
+; (FACT (Inheritance Lily human))
+; (FACT (Inheritance Allen sodaDrinker))
+; (exec (freq 000 call-example)
+;   (, (valuation val-example (Inheritance $x human))
+;      (DEF valuation-fn $val-p $val-t))
+;   (O (+ (exec (freq 001 run-valuation) $val-p $val-t))))
