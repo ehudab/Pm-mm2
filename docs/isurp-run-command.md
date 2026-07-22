@@ -7,13 +7,13 @@ Space.  The CLI argument is repeatable:
 mork run <main-file> --aux-path <extra-file-1> --aux-path <extra-file-2>
 ```
 
-For the split ISurp implementation, use `00_defs.metta` as the main file and
-load the remaining implementation modules with `--aux-path`.
+For the split ISurp implementation, use `src/common-utils/utils.metta` as the
+main file and load the ISurp implementation modules with `--aux-path`.
 
 ## EQ-prob-only test
 
 ```bash
-mork run Pattern-miner-mm2/src/isurp_modules/00_defs.metta \
+mork run Pattern-miner-mm2/src/common-utils/utils.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/01_bootstrap_partitions.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/02_block_support.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/03_abstractness_sort.metta \
@@ -48,7 +48,7 @@ Use this shape when the input DB file provides the full ISurp input contract:
 Run:
 
 ```bash
-mork run Pattern-miner-mm2/src/isurp_modules/00_defs.metta \
+mork run Pattern-miner-mm2/src/common-utils/utils.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/01_bootstrap_partitions.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/02_block_support.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/03_abstractness_sort.metta \
@@ -127,7 +127,7 @@ Expected important facts:
 ## newer ISurp integration test
 
 ```bash
-mork run Pattern-miner-mm2/src/isurp_modules/00_defs.metta \
+mork run Pattern-miner-mm2/src/common-utils/utils.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/01_bootstrap_partitions.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/02_block_support.metta \
   --aux-path Pattern-miner-mm2/src/isurp_modules/03_abstractness_sort.metta \
@@ -161,7 +161,7 @@ ISurp stages use readable tuple priorities:
 
 | File | Purpose |
 | --- | --- |
-| `00_defs.metta` | Reusable function-definition facts such as `count-db`, `prob`, `total-counts`, and `dst-from-interval`. |
+| `src/common-utils/utils.metta` | Shared reusable function-definition facts such as `count-db`, `prob`, `total-counts`, and `dst-from-interval`. |
 | `01_bootstrap_partitions.metta` | Starts the ISurp pipeline, indexes variables, generates partitions, and expands partitions into blocks. |
 | `02_block_support.metta` | Computes `block-support` facts for generated partition blocks. |
 | `03_abstractness_sort.metta` | Selects the most abstract connected block for each joint variable using triplet-level syntactic scoring and deterministic fallbacks. |
@@ -173,4 +173,4 @@ ISurp stages use readable tuple priorities:
 | `09_isurp_new.metta` | Connects the newer helper facts into `ji-prob-est-interval-of`, distance, and final `isurp-new-of`. |
 
 The legacy monolithic `src/isurp.metta` has been removed.  Use the modular
-command above so each ISurp stage is loaded explicitly.
+command above so each shared utility and ISurp stage is loaded explicitly.
