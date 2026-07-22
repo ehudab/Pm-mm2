@@ -1,20 +1,10 @@
+;; TEST-AUX src/isurp_modules/03_abstractness_sort.metta
+;; TEST-AUX src/isurp_modules/04_eq_prob.metta
+;; TEST-AUX src/isurp_modules/05_pro_prob_wout_joint.metta
+;; TEST-AUX src/isurp_modules/06_ji_prob_est.metta
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ji-prob-est-only test DB
-;;
-;; This fixture gives enough data for:
-;;
-;;   pro-prob-wout-joint = 0.25
-;;   eq-prob              = 0.5
-;;
-;; Expected final result:
-;;
-;;   ji-prob-est = 0.25 * 0.5 = 0.125
-;;
-;; Expected important output:
-;;
-;;   (ji-prob-est-of
-;;       (((Inheritance (var 0) man)) ((Inheritance (var 0) ugly)))
-;;       0.125)
+;; ji-prob-est component test
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (INPUT DB-SIZE 4)
@@ -43,3 +33,5 @@
 (Inheritance Bob man)
 (Inheritance Allen ugly)
 (Inheritance Lily ugly)
+
+(EXPECTED-RESULT ji-prob-est (ji-prob-est-of (((Inheritance (var 0) man)) ((Inheritance (var 0) ugly))) 0.125))
