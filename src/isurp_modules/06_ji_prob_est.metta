@@ -26,7 +26,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(exec 40
+(exec (surp 090 ji-prob-est)
     (, (pro-prob-wout-joint-of $partition $independent-prob)
        (eq-prob-of $partition $eq-prob))
     (O

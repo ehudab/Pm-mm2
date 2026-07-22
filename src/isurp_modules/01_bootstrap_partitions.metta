@@ -11,7 +11,7 @@
 ;; into real MM2 variables for support-count queries.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(exec 1
+(exec (surp 010 bootstrap-definitions)
     (, (INPUT DB $db-name)
        (INPUT PATTERN ($pattern $support))
        ((count-db $db-name -> db-size) $src-of-count $sink-of-count)
@@ -21,16 +21,16 @@
     (O
         ;; Optional DB-size count path.  The current `total-counts` definition
         ;; uses `INPUT DB-SIZE`, but this fact can help with debugging.
-        (+ (exec 0 $src-of-count $sink-of-count))
+        (+ (exec (surp 011 count-db) $src-of-count $sink-of-count))
 
         ;; Count clauses in the input comma pattern.
-        (+ (exec 0 $src-of-cnj $sink-of-cnj))
+        (+ (exec (surp 012 count-conjuncts) $src-of-cnj $sink-of-cnj))
 
         ;; Compute C(db_size, number_of_conjuncts).
-        (+ (exec 1 $src-of-tc $sink-of-tc))
+        (+ (exec (surp 013 total-counts) $src-of-tc $sink-of-tc))
 
         ;; Compute empirical pattern probability from the provided support.
-        (+ (exec 2 $src-of-prob $sink-of-prob))))
+        (+ (exec (surp 014 prob) $src-of-prob $sink-of-prob))))
 
 
 ;; Newer ISurp needs only the indexed pattern and should not depend on the
@@ -44,12 +44,12 @@
 ;;
 ;; The repeated `$x` in the source side is a real MORK variable, so these rules
 ;; only fire when the same input variable is shared across the clauses.
-(exec 1
+(exec (surp 020 index-pattern-1)
     (, (INPUT PATTERN ((, ($rel1 $x $arg1)) $support)))
     (, (indexed-pattern (($rel1 (var 0) $arg1)))
        (indexed-pattern-of (, ($rel1 $x $arg1)) (($rel1 (var 0) $arg1)))))
 
-(exec 1
+(exec (surp 020 index-pattern-2)
     (, (INPUT PATTERN ((, ($rel1 $x $arg1)
                            ($rel2 $x $arg2)) $support)))
     (, (indexed-pattern (($rel1 (var 0) $arg1)
@@ -59,7 +59,7 @@
                            (($rel1 (var 0) $arg1)
                             ($rel2 (var 0) $arg2)))))
 
-(exec 1
+(exec (surp 020 index-pattern-3)
     (, (INPUT PATTERN ((, ($rel1 $x $arg1)
                            ($rel2 $x $arg2)
                            ($rel3 $x $arg3)) $support)))
@@ -76,7 +76,7 @@
 
 ;; Explicit fallback partitions for indexed inputs.  These follow
 ;; `partitions-wout-pattern`: the original full pattern is excluded.
-(exec 2
+(exec (surp 030 explicit-partition-2)
     (, (indexed-pattern ($c1 $c2)))
     (,
         (ji-prob-partitions-of ($c1 $c2) ((($c1) ($c2))))
@@ -86,7 +86,7 @@
         (block (($c1) ($c2)) ($c2))))
 
 
-(exec 2
+(exec (surp 030 explicit-partition-3)
     (, (indexed-pattern ($c1 $c2 $c3)))
     (,
         (ji-prob-partitions-of ($c1 $c2 $c3)
@@ -129,7 +129,7 @@
 ;; and each block is a list of conjuncts.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(exec 2
+(exec (surp 031 generate-partitions)
     (, (indexed-pattern $indexed-pattern))
     (O
         (pure
@@ -156,9 +156,9 @@
 ;;   4. writes itself back
 ;;
 ;; It halts naturally when the remaining list no longer has a first element.
-(exec 3
+(exec (surp 032 partition-iterator)
     (, (partitions-of $indexed-pattern $indexed-partition)
-       (exec 3 $src $sink))
+       (exec (surp 032 partition-iterator) $src $sink))
     (O
         (pure
             (partition $car)
@@ -169,7 +169,7 @@
             $cdr
             (cdr-atom (' $indexed-partition)))
         (- (partitions-of $indexed-pattern $indexed-partition))
-        (+ (exec 3 $src $sink))))
+        (+ (exec (surp 032 partition-iterator) $src $sink))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -191,16 +191,16 @@
 
 ;; Copy the partition so the block iterator can consume the copy without losing
 ;; the original partition shape.
-(exec 4
+(exec (surp 033 copy-partition)
     (, (partition $partition))
     (, (copy-of-partition $partition $partition)))
 
 
 ;; Iterate through the copied partition and write one `(block partition block)`
 ;; fact per block.
-(exec 5
+(exec (surp 034 block-iterator)
     (, (copy-of-partition $partition $partition-copy)
-       (exec 5 $src $sink))
+       (exec (surp 034 block-iterator) $src $sink))
     (O
         (pure
             (block $partition $block)
@@ -211,4 +211,4 @@
             $cdr
             (cdr-atom (' $partition-copy)))
         (- (copy-of-partition $partition $partition-copy))
-        (+ (exec 5 $src $sink))))
+        (+ (exec (surp 034 block-iterator) $src $sink))))

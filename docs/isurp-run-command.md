@@ -150,6 +150,15 @@ Expected important facts:
 
 ## Module Map
 
+ISurp stages use readable tuple priorities:
+
+```metta
+(exec (surp <priority> <function-name>) $sources $sinks)
+```
+
+`surp` is the module namespace, `<priority>` controls execution order, and
+`<function-name>` describes the rule.
+
 | File | Purpose |
 | --- | --- |
 | `00_defs.metta` | Reusable function-definition facts such as `count-db`, `prob`, `total-counts`, and `dst-from-interval`. |

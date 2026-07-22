@@ -49,29 +49,29 @@
 ;;
 ;; Expand every block into individual clauses so variable scanning does not need
 ;; to know whether a block has one, two, or more clauses.
-(exec 6
+(exec (surp 050 eq-copy-block)
     (, (block $partition $block))
     (, (eq-copy-block $partition $block $block)))
 
 ;; Direct block-shape extraction.  These rules are intentionally kept in
 ;; addition to the iterator above because some MORK builds do not reliably emit
 ;; `car-atom` for single-clause block tuples whose element is itself a tuple.
-(exec 6
+(exec (surp 051 eq-block-clause-1)
     (, (block $partition ($c1)))
     (, (eq-block-clause $partition ($c1) $c1)))
 
-(exec 6
+(exec (surp 051 eq-block-clause-2)
     (, (block $partition ($c1 $c2)))
     (, (eq-block-clause $partition ($c1 $c2) $c1)
        (eq-block-clause $partition ($c1 $c2) $c2)))
 
-(exec 6
+(exec (surp 051 eq-block-clause-3)
     (, (block $partition ($c1 $c2 $c3)))
     (, (eq-block-clause $partition ($c1 $c2 $c3) $c1)
        (eq-block-clause $partition ($c1 $c2 $c3) $c2)
        (eq-block-clause $partition ($c1 $c2 $c3) $c3)))
 
-(exec 6
+(exec (surp 051 eq-block-clause-4)
     (, (block $partition ($c1 $c2 $c3 $c4)))
     (, (eq-block-clause $partition ($c1 $c2 $c3 $c4) $c1)
        (eq-block-clause $partition ($c1 $c2 $c3 $c4) $c2)
@@ -86,9 +86,9 @@
 ;;   (eq-block-clause $partition $block $clause)
 ;;
 ;; for each clause in that block.
-(exec 7
+(exec (surp 052 eq-block-iterator)
     (, (eq-copy-block $partition $block $copy)
-       (exec 7 $src $sink))
+       (exec (surp 052 eq-block-iterator) $src $sink))
     (O
         (pure
             (eq-block-clause $partition $block $clause)
@@ -99,7 +99,7 @@
             $tail
             (cdr-atom (' $copy)))
         (- (eq-copy-block $partition $block $copy))
-        (+ (exec 7 $src $sink))))
+        (+ (exec (surp 052 eq-block-iterator) $src $sink))))
 
 
 ;; get-var / connected-subpatterns-with-var:
@@ -111,11 +111,11 @@
 ;; The first element is treated as the link/predicate, so only the two argument
 ;; positions are checked.  This intentionally excludes n-ary predicate atoms
 ;; such as `($rel $x $a $b)` and nested wrapper terms.
-(exec 7
+(exec (surp 053 eq-scan-left-var)
     (, (eq-block-clause $partition $block ($rel (var $n) $a)))
     (, (eq-block-has-var $partition $block (var $n))))
 
-(exec 7
+(exec (surp 053 eq-scan-right-var)
     (, (eq-block-clause $partition $block ($rel $a (var $n))))
     (, (eq-block-has-var $partition $block (var $n))))
 
@@ -124,25 +124,25 @@
 ;;
 ;; A variable is joint for a partition when it appears in at least two different
 ;; blocks of that partition.
-(exec 8
+(exec (surp 054 eq-joint-var-2)
     (, (partition ($b1 $b2))
        (eq-block-has-var ($b1 $b2) $b1 $var)
        (eq-block-has-var ($b1 $b2) $b2 $var))
     (, (eq-joint-var ($b1 $b2) $var)))
 
-(exec 8
+(exec (surp 054 eq-joint-var-3-12)
     (, (partition ($b1 $b2 $b3))
        (eq-block-has-var ($b1 $b2 $b3) $b1 $var)
        (eq-block-has-var ($b1 $b2 $b3) $b2 $var))
     (, (eq-joint-var ($b1 $b2 $b3) $var)))
 
-(exec 8
+(exec (surp 054 eq-joint-var-3-13)
     (, (partition ($b1 $b2 $b3))
        (eq-block-has-var ($b1 $b2 $b3) $b1 $var)
        (eq-block-has-var ($b1 $b2 $b3) $b3 $var))
     (, (eq-joint-var ($b1 $b2 $b3) $var)))
 
-(exec 8
+(exec (surp 054 eq-joint-var-3-23)
     (, (partition ($b1 $b2 $b3))
        (eq-block-has-var ($b1 $b2 $b3) $b2 $var)
        (eq-block-has-var ($b1 $b2 $b3) $b3 $var))
@@ -159,7 +159,7 @@
 ;; generated query, but this MORK build panics on that sink shape.  This MM2
 ;; fallback therefore counts the generated block query.  It is a conservative
 ;; support-count approximation and keeps the pipeline executable.
-(exec 9
+(exec (surp 055 eq-value-query)
     (, (eq-joint-var $partition $var)
        (eq-block-has-var $partition $block $var))
     (O
@@ -173,10 +173,10 @@
 ;; value-count, part 2:
 ;;
 ;; Count the generated block query as the supported fallback for value-count.
-(exec 10
+(exec (surp 056 eq-value-count)
     (, (eq-value-query $partition $block $var $query))
     (,
-        (exec 10
+        (exec (surp 056 eq-value-count)
             $query
             (O
                 (count
@@ -196,11 +196,11 @@
 ;; This rule turns that count into the per-variable equality correction:
 ;;
 ;;   factor(var) = 1 / support(most abstract connected block)
-(exec 11
+(exec (surp 057 eq-abstractness-request)
     (, (eq-joint-var $partition $var))
     (, (abstractness-sort-request $partition $var)))
 
-(exec 38
+(exec (surp 070 eq-var-factor)
     (, (eq-joint-var $partition $var)
        (most-abstract-block-support $partition $var $most-abstract-block $count))
     (O
@@ -222,16 +222,16 @@
 
 ;; One-block partitions have no cross-block joint variables, so the correction
 ;; factor is the multiplicative identity.
-(exec 39
+(exec (surp 071 eq-prob-identity)
     (, (partition ($b1)))
     (, (eq-prob-of ($b1) 1.0)))
 
-(exec 39
+(exec (surp 071 eq-prob-single)
     (, (eq-var-factor $partition $v1 $f1))
     (, (eq-prob-of $partition $f1)))
 
 
-(exec 39
+(exec (surp 071 eq-prob-var-01)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1))
     (O
@@ -243,7 +243,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f1))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-02)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 2) $f2))
     (O
@@ -255,7 +255,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f2))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-03)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -267,7 +267,7 @@
                     (f64_from_string $f0)
                     (f64_from_string $f3))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-12)
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2))
     (O
@@ -279,7 +279,7 @@
                     (f64_from_string $f1)
                     (f64_from_string $f2))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-13)
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -291,7 +291,7 @@
                     (f64_from_string $f1)
                     (f64_from_string $f3))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-23)
     (, (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
     (O
@@ -305,7 +305,7 @@
 
 ;; Triple and four-variable products for partitions that expose multiple joint
 ;; variables across binary predicate clauses.
-(exec 39
+(exec (surp 071 eq-prob-var-012)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2))
@@ -320,7 +320,7 @@
                         (f64_from_string $f1))
                     (f64_from_string $f2))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-013)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 3) $f3))
@@ -335,7 +335,7 @@
                         (f64_from_string $f1))
                     (f64_from_string $f3))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-023)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
@@ -350,7 +350,7 @@
                         (f64_from_string $f2))
                     (f64_from_string $f3))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-123)
     (, (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2)
        (eq-var-factor $partition (var 3) $f3))
@@ -365,7 +365,7 @@
                         (f64_from_string $f2))
                     (f64_from_string $f3))))))
 
-(exec 39
+(exec (surp 071 eq-prob-var-0123)
     (, (eq-var-factor $partition (var 0) $f0)
        (eq-var-factor $partition (var 1) $f1)
        (eq-var-factor $partition (var 2) $f2)

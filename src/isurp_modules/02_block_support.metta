@@ -11,7 +11,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(exec 6
+(exec (surp 040 block-support-query)
     (, (INPUT PATTERN ($pattern $pattern-support))
        (block $partition $indexed-block))
     (O
@@ -25,7 +25,7 @@
         ;; Create a real exec from the generated query.  When that exec runs it
         ;; counts support for this block.
         (pure
-            (exec 6
+            (exec (surp 041 count-block-support)
                 $query
                 (O
                     (count
@@ -45,10 +45,10 @@
 ;; `indices_to_vars` query above for already-indexed input patterns.  This
 ;; fallback keeps support counting available for the common binary predicate
 ;; shape used in the ISurp integration tests.
-(exec 6
+(exec (surp 040 block-support-fallback)
     (, (block $partition (($rel (var $n) $arg))))
     (,
-        (exec 6
+        (exec (surp 041 count-block-support)
             (, ($rel $x $arg))
             (O
                 (count

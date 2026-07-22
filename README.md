@@ -61,42 +61,49 @@ pattern
 | Source function | Source file | Purpose | Current MM2 equivalent | Status |
 |---|---|---|---|---|
 | `isurp-old` | `isurp-old.metta` | Top-level old ISurp formula | Whole staged pipeline in `src/surp.metta` | Partial |
-| `total_counts` | `isurp-old.metta`, `binomialMetta.metta` | Compute `C(db_size, n_conjuncts)` | `((total-counts ...))` definition, stages 1-2 | Implemented for known `INPUT DB-SIZE` |
+| `total_counts` | `isurp-old.metta`, `binomialMetta.metta` | Compute `C(db_size, n_conjuncts)` | `((total-counts ...))` definition, `(surp 013 total-counts)` | Implemented for known `INPUT DB-SIZE` |
 | `db_size` | utility/imported behavior | Count atoms in DB | `((count-db ...))` exists, but practical run uses `INPUT DB-SIZE` | Partial |
 | `n_conjuncts_new` | `common-utils.metta` | Count conjuncts in `(, ...)` pattern | `((count-conjuncts ...))` using `size-atom (cdr-atom pattern)` | Implemented for comma patterns |
 | `cal_binomial` | `binomialMetta.metta` | Binomial count | Uses helper grounding: `falling_factorial / factorial` | Implemented through `MM2-Helper` |
 | `prob` | `isurp-old.metta` | `support / total_count` | `((prob ...))` and block-prob stage | Implemented |
 | `sup-num` | imported/common behavior | Count matches for a pattern | MM2 dynamic `count` sink | Partial, needs stronger N-ary validation |
 | `partitions-wout-pattern` | `partition-metta.metta` | Generate all partitions except the original full pattern | Helper `partitions` on indexed conjunct list | Partial; semantics must match source exactly |
-| `blk-prob` | `isurp-old.metta` | Convert block to comma pattern and compute `prob` | Stages 6-7: dynamic query plus `block-prob` | Partial |
-| `iprob_` | `isurp-old.metta` | List block probabilities for one partition | Stage 8 product rules | Partial; hard-coded arity |
-| `iprob` | `isurp-old.metta` | Multiply block probabilities | Stage 8 `partition-product` | Partial; supports only 2 or 3 blocks |
-| `isurp-old_` | `isurp-old.metta` | Compute products for all partitions | Stages 3-9 | Partial; final interval hard-coded for 3 conjuncts |
-| `min-max` | utility/imported behavior | Get min/max of product list | Stage 9 `min-atom` / `max-atom` | Partial; hard-coded product collection |
-| `dst_from_interval` | `surp-utils.metta` | Distance outside `[emin, emax]` | `((dst-from-interval ...))` plus stages 11-12 | Implemented |
-| normalization | `isurp-old.metta` | `min(dst / max(emax, pattern_prob), 1.0)` | Stages 13-16 | Implemented for current outputs |
-| cleanup | MM2-specific | Remove temporary facts | Stages 17-19 | Implemented |
+| `blk-prob` | `isurp-old.metta` | Convert block to comma pattern and compute `prob` | `02_block_support.metta` plus `05_pro_prob_wout_joint.metta` | Partial |
+| `iprob_` | `isurp-old.metta` | List block probabilities for one partition | `(surp 081 pro-partition-prob-*)` rules | Partial; hard-coded arity |
+| `iprob` | `isurp-old.metta` | Multiply block probabilities | `pro-prob-wout-joint-of` | Partial; supports current test arities |
+| `isurp-old_` | `isurp-old.metta` | Compute products for all partitions | `06_ji_prob_est.metta` and `07_do_ji_prob.metta` | Partial |
+| `min-max` | utility/imported behavior | Get min/max of product list | `(surp 120 ji-interval-*)` and `(surp 121 ji-interval)` | Partial; explicit list shapes |
+| `dst_from_interval` | `surp-utils.metta` | Distance outside `[emin, emax]` | `((dst-from-interval ...))` plus `(surp 122-126 ...)` stages | Implemented |
+| normalization | `isurp-old.metta` | `min(dst / max(emax, pattern_prob), 1.0)` | `(surp 127-129 ...)` stages | Implemented for current outputs |
+| cleanup | MM2-specific | Remove temporary facts | Not currently used in modular ISurp | Not implemented |
 
 ## Current MM2 Pipeline
 
-`src/surp.metta` currently uses these stages:
+The modular ISurp implementation currently uses tuple priorities with this
+shape:
+
+```metta
+(exec (surp <priority> <function-name>) $sources $sinks)
+```
+
+The second value is the sortable priority.  The third value names the stage for
+readability.
 
 | Stage | What it does |
 |---|---|
-| Function definitions | Stores reusable exec templates as data: `count-db`, `count-conjuncts`, `total-counts`, `prob`, `dst-from-interval`. |
-| `exec 1` | Reads `INPUT DB`, `INPUT PATTERN`, function definitions, spawns counting/probability execs, and indexes variables with `vars_to_indices`. |
-| `exec 2` | Generates partitions from the indexed pattern using `partitions`. |
-| `exec 3` | Iterates through the list of partitions using `car-atom` / `cdr-atom`. |
-| `exec 4` | Copies each partition before block expansion. |
-| `exec 5` | Iterates through blocks inside each partition. |
-| `exec 6` | Converts indexed block back to variables with `indices_to_vars` and creates a dynamic support-count exec. |
-| `exec 7` | Converts `block-support` into `block-prob = support / total-count-of(full-pattern)`. |
-| `exec 8` | Multiplies block probabilities into `partition-product`. Currently supports 2-block and 3-block partitions. |
-| `exec 9` | Collects four known partition products for a 3-conjunct pattern and computes min/max. |
-| `exec 10` | Writes `(partition-product-range $min $max)`. |
-| `exec 11-12` | Computes distance from empirical probability to the interval. |
-| `exec 13-16` | Applies normalization or raw distance output. |
-| `exec 17-19` | Cleanup of temporary facts. |
+| `00_defs.metta` | Stores reusable function templates as data: `count-db`, `count-conjuncts`, `total-counts`, `prob`, `dst-from-interval`. |
+| `(surp 010-014 ...)` | Reads `INPUT DB`, `INPUT PATTERN`, and spawns reusable count/probability definitions. |
+| `(surp 020 ...)` | Indexes raw pattern variables into `(var N)` markers. |
+| `(surp 030-034 ...)` | Generates partitions and expands each partition into `block` facts. |
+| `(surp 040-041 ...)` | Converts indexed blocks back to MORK variables and materializes `block-support`. |
+| `(surp 050-057 ...)` | Prepares eq-prob facts: block clauses, joint variables, value queries, and abstractness requests. |
+| `(surp 060-066 ...)` | Scores blocks by abstractness and exposes `most-abstract-block-support`. |
+| `(surp 070-071 ...)` | Computes `eq-var-factor` and `eq-prob-of`. |
+| `(surp 080-081 ...)` | Computes `pro-prob-wout-joint-of`. |
+| `(surp 090 ...)` | Computes `ji-prob-est-of`. |
+| `(surp 100 ...)` | Collects requested `ji-prob-est-of` values into `do-ji-prob-of`. |
+| `(surp 110 ...)` | Computes direct `emp-prob-pbs-of` without sampling. |
+| `(surp 120-129 ...)` | Computes the final interval, distance, normalization/raw output, and `isurp-new-of`. |
 
 ## Validation Status
 
@@ -475,4 +482,3 @@ The current output fact is spelled:
 ```
 
 This preserves the current implementation spelling. If we rename it later to `surprisingness-of`, update cleanup and validation together.
-
