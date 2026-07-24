@@ -1,8 +1,15 @@
-# Connected Expansion Inside `freq`
+# Connected Conjunction Expansion
 
-Connected conjunction expansion is a stage of the frequent miner. It does not
-have its own module namespace or source file. The implementation lives in
-`src/frequent-miner.metta`, and every owned priority begins with `freq`.
+The production path is a stage inside `src/frequent-miner.metta`. A standalone
+development version lives in `src/conjunction-expansion-triplet.metta` so it
+can evolve without changing the frequent-miner file. Both use the `freq`
+priority convention and the shared callables in
+`src/common-utils/utils.metta`; the standalone version uses `ce-*` only for
+private working facts.
+
+This walkthrough uses the integrated `freq-*` fact names. The standalone
+pipeline follows the same flow and returns `expanded-conjunct` instead of
+`frequent-pattern`.
 
 ## Contract
 
@@ -25,6 +32,15 @@ The only public miner result is:
 
 ```metta
 (frequent-pattern (, (Parent $a $b) (Parent $b $c)) 4)
+```
+
+The standalone result keeps its conjunction indexed:
+
+```metta
+(expanded-conjunct 2
+  ((Parent (var 0) (var 1))
+   (Parent (var 1) (var 2)))
+  4)
 ```
 
 All `freq-*` facts are temporary and are consumed before priority `900`
@@ -185,7 +201,9 @@ The raw union passes through three grounded operations:
 These calls remain separate because quoted list results are not safely
 composable as one nested MM2 expression. After the three stages,
 alpha-equivalent candidates become the same exact fact and MORK's set behavior
-deduplicates them.
+deduplicates them. The standalone implementation obtains these stages from the
+shared `canonicalize-indexed-conjunction` callable and measures the result with
+the shared `conjunction-size` callable.
 
 ## Cleanup
 
@@ -194,7 +212,9 @@ Build state that must survive several mapping stages is stored once inside a
 relationship directly. At priority `430`, one generic rule removes each
 wrapper. Facts used by only one next stage are consumed directly. Priority
 `900` removes `freq-base` after every recursively queued lower-priority cycle
-has completed.
+has completed. The standalone implementation uses the shared `drop-matched`,
+`replace-matched`, and `emit-from-matches-2/3/4` callables for equivalent
+simple cleanup, state-transition, and join rules.
 
 The final test outputs contain public `frequent-pattern` facts but no `freq-*`
 facts.
@@ -204,7 +224,9 @@ facts.
 The executable example is
 `tests/frequent-miner/conjunction-expansion-test.metta`. It covers constant
 slots, connected size-2 and size-3 parent chains, repeated variables, and
-representative canonical outputs from the retired standalone implementation.
+representative canonical outputs. The test loads
+`src/common-utils/utils.metta` before `src/frequent-miner.metta` and reuses
+`data/ugly-sodaDrinker.metta`.
 
 Run them with:
 

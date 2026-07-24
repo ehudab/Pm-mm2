@@ -13,13 +13,14 @@ docs/
   testing.md                 Test file format and runner workflow
 
 data/
-  frequent-miner/            Frequent-miner test fixtures
-  ugly-sodaDrinker.metta     Surprisingness test fixture
+  ugly-sodaDrinker.metta     Shared mining and surprisingness fixture
 
 src/
+  common-utils/              Reusable MM2 callable definitions
+  conjunction-expansion-triplet.metta
+                             Standalone triplet conjunction expansion
   surp.metta                 Current MM2 implementation of isurp-old
   frequent-miner.metta       Frequent mining and connected expansion
-  dummy.metta                Scratch file
 
 tests/
   frequent-miner/            Runnable frequent-miner test cases
@@ -86,3 +87,13 @@ Its only public result is a canonical conjunction with support:
 Conjunction expansion is an internal stage of the `freq` module. It is not a
 third project module. See `docs/conjunction-expansion-walkthrough.md` for the
 algorithm and `justMine/` for worked examples.
+
+For isolated development, `src/conjunction-expansion-triplet.metta` exposes
+the same triplet expansion flow without loading or changing
+`src/frequent-miner.metta`. It reads the same `MIN-SUPPORT`, `MAX-SIZE`, seed,
+and active database facts. The caller loads `src/common-utils/utils.metta`
+alongside it. Its public result is:
+
+```metta
+(expanded-conjunct size indexed-candidate support)
+```

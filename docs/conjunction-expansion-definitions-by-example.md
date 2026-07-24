@@ -4,6 +4,21 @@ This is a compact map from `src/frequent-miner.metta` definitions to the facts
 they transform. For the full algorithm, read
 `docs/conjunction-expansion-walkthrough.md`.
 
+The standalone `src/conjunction-expansion-triplet.metta` follows the same
+route, but intentionally replaces simple local wrapper definitions with
+callables from `src/common-utils/utils.metta`:
+
+| Repeated rule shape | Shared callable |
+| --- | --- |
+| match and remove | `drop-matched` |
+| replace one state fact | `replace-matched` |
+| join facts and emit one fact | `emit-from-matches-2/3/4` |
+| sort and alpha-normalize an indexed conjunction | `canonicalize-indexed-conjunction` |
+| measure the resulting conjunction | `conjunction-size` |
+
+The sections below retain the `freq-*` names because they document the
+integrated frequent-miner implementation, which remains separate.
+
 ## Support Cycle
 
 ```text

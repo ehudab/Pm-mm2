@@ -31,9 +31,14 @@ tests/frequent-miner/conjunction-expansion-test.metta
 2. Add the required data and source files as aux paths.
 
 ```metta
-;; TEST-AUX data/frequent-miner/conjunction-expansion.metta
+;; TEST-AUX data/ugly-sodaDrinker.metta
+;; TEST-AUX src/common-utils/utils.metta
 ;; TEST-AUX src/frequent-miner.metta
 ```
+
+List shared utilities before the implementation that calls them. The current
+conjunction-expansion test uses the existing `ugly-sodaDrinker.metta` fixture;
+it does not maintain a separate copy of the database.
 
 3. Add the input facts expected by the module.
 

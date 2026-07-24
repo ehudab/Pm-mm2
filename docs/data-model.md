@@ -62,6 +62,10 @@ The project has exactly two module namespaces:
 - `freq` owns frequent mining, including connected conjunction expansion.
 - `surp` owns surprisingness scoring.
 
+`src/conjunction-expansion-triplet.metta` is a standalone development
+component, not a third module namespace. It therefore follows the `freq`
+priority convention while keeping its temporary facts under the `ce-` prefix.
+
 Helpers, cleanup, tracing, and debugging remain stages inside their owning
 module. They do not introduce `shared`, `debug`, `conj-exp`, or similar module
 names.
@@ -112,7 +116,7 @@ Use explicit predicates to make each fact type clear.
 | Database facts | Facts being mined | `(Inheritance Allen man)` |
 | Function definitions | Reusable pipeline definitions | `((count-conjuncts ... -> ...) $src $sink)` |
 | Intermediate facts | Temporary pipeline state | `(block-support $partition $block $support)` |
-| Final results | Intended output | `(frequent-pattern $pattern $support)`, `(surprisingness-of $pattern $score)` |
+| Final results | Intended output | `(frequent-pattern $pattern $support)`, `(expanded-conjunct $size $candidate $support)`, `(surprisingness-of $pattern $score)` |
 | Debug facts | Temporary inspection facts | `(DEBUG stage value)` |
 | Dummy facts | Development-only facts | `(DUMMY ...)` |
 
@@ -249,7 +253,7 @@ We use two function definition styles in this project.
 
 ### Common Functions
 
-Globaly common functions should use this callable shape:
+Globally common functions should use this callable shape:
 
 ```metta
 ((function-name $arg1 $arg2 -> output-predicate) $src $sink)
@@ -260,6 +264,11 @@ Example:
 ```metta
 ((count-conjuncts $pattern -> num-of-conjuncts) $src $sink)
 ```
+
+Project-wide callable definitions live in `src/common-utils/utils.metta`.
+Current examples include support counting and filtering, matched-fact
+drop/replacement, joined fact emission, indexed-conjunction canonicalization,
+and conjunction sizing.
 
 A caller can specialize it by matching the definition and spawning the returned exec:
 
