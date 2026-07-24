@@ -33,7 +33,7 @@ tests/frequent-miner/conjunction-expansion-test.metta
 ```metta
 ;; TEST-AUX data/ugly-sodaDrinker.metta
 ;; TEST-AUX src/common-utils/utils.metta
-;; TEST-AUX src/frequent-miner.metta
+;; TEST-AUX src/conjunction-expansion-triplet.metta
 ```
 
 List shared utilities before the implementation that calls them. The current
@@ -50,7 +50,8 @@ it does not maintain a separate copy of the database.
 4. Add one or more expected results.
 
 ```metta
-(EXPECTED-RESULT conjunction-expansion-singleton (frequent-pattern (, (Inheritance $x human)) 10))
+(EXPECTED-RESULT conjunction-expansion-singleton
+  (expanded-conjunct 1 ((Inheritance (var 0) human)) 10))
 ```
 
 The first argument after `EXPECTED-RESULT` is the test identifier. The second

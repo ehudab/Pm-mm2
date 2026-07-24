@@ -1,19 +1,12 @@
-# Connected Conjunction Expansion
+# Standalone Conjunction Expansion
 
-The production path is a stage inside `src/frequent-miner.metta`. A standalone
-development version lives in `src/conjunction-expansion-triplet.metta` so it
-can evolve without changing the frequent-miner file. Both use the `freq`
-priority convention and the shared callables in
-`src/common-utils/utils.metta`; the standalone version uses `ce-*` only for
-private working facts.
-
-This walkthrough uses the integrated `freq-*` fact names. The standalone
-pipeline follows the same flow and returns `expanded-conjunct` instead of
-`frequent-pattern`.
+`src/conjunction-expansion-triplet.metta` expands connected triplet patterns
+without modifying or loading `src/frequent-miner.metta`. Its caller also loads
+`src/common-utils/utils.metta`.
 
 ## Contract
 
-The miner reads configuration and triplet seed patterns:
+Inputs:
 
 ```metta
 (INPUT MIN-SUPPORT 2)
@@ -21,20 +14,14 @@ The miner reads configuration and triplet seed patterns:
 (pattern 0 (Parent $x $y))
 ```
 
-Database facts are active facts in the same atomspace:
+Database triplets are active facts in the same atomspace:
 
 ```metta
 (Parent Alice Bob)
 (Parent Bob Carol)
 ```
 
-The only public miner result is:
-
-```metta
-(frequent-pattern (, (Parent $a $b) (Parent $b $c)) 4)
-```
-
-The standalone result keeps its conjunction indexed:
+Output:
 
 ```metta
 (expanded-conjunct 2
@@ -43,196 +30,105 @@ The standalone result keeps its conjunction indexed:
   4)
 ```
 
-All `freq-*` facts are temporary and are consumed before priority `900`
-finishes.
-
-## Why Patterns Are Indexed Internally
-
-MM2 variables are useful for support queries but awkward as durable data. The
-miner therefore normalizes each seed with `vars_to_indices`:
-
-```text
-(Parent $x $y)
-    ->
-(Parent (var 0) (var 1))
-```
-
-A conjunction is stored as a list of indexed atoms:
-
-```metta
-((Parent (var 0) (var 1))
- (Parent (var 1) (var 2)))
-```
-
-Before support counting or public output, `indices_to_vars` turns the markers
-back into a real query and `cons` adds the conjunction head:
-
-```metta
-(, (Parent $a $b) (Parent $b $c))
-```
+The output stores a canonical indexed conjunction, its size, and its support.
+All `ce-*` facts are temporary and are consumed before execution finishes.
 
 ## Pipeline
 
-The important priority bands are:
+```text
+seed pattern
+  -> indexed base and singleton candidate
+  -> support count
+  -> MIN-SUPPORT filter
+  -> connected base variants
+  -> union with the current conjunction
+  -> canonicalize and measure
+  -> growth and MAX-SIZE filter
+  -> next support cycle
+```
 
-| Band | Purpose |
-| --- | --- |
-| `freq 010-020` | Normalize seeds and start mining |
-| `freq 100-141` | Count support and keep frequent candidates |
-| `freq 200-221` | Decide whether a frequent candidate may grow |
-| `freq 300-374` | Pair candidates with bases and find variable choices |
-| `freq 400-431` | Generate connected bases, union them, and clean build state |
-| `freq 500-531` | Canonicalize, reject non-growth, and queue the next size |
-| `freq 900` | Remove normalized bases after recursion ends |
+The implementation uses the project’s `(freq NNN label)` priority convention.
+Small scheduler definitions are retained because MORK consumes an `exec` after
+running it and large substituted rules can exceed its variable limit.
 
-Dynamic `DEF` bodies are scheduled in these bands because MORK consumes an
-`exec` after it runs. A newly generated size-2 candidate therefore needs a new
-support-cycle exec. The small scheduler definitions also keep substituted
-rules below MORK's 64-variable limit.
+## Indexed Patterns
+
+Seeds are converted with `vars_to_indices`:
+
+```text
+(Parent $x $y)
+  -> (Parent (var 0) (var 1))
+```
+
+Indexed markers are durable data. Support counting temporarily converts the
+candidate back to real variables so it can match active database facts.
 
 ## Support And Depth
 
-`freq-pending` holds one indexed candidate awaiting support counting:
+The shared `count-indexed-conjunction-support` callable counts candidate
+matches. `support-at-least` compares the result with `MIN-SUPPORT`.
 
-```metta
-(freq-pending 2
-  ((Parent (var 0) (var 1))
-   (Parent (var 1) (var 2))))
-```
-
-The miner converts it to a query, uses MORK's `count` sink, and compares the
-text support with `INPUT MIN-SUPPORT`. Passing candidates produce one
-`frequent-pattern` result and one `freq-expand-check` request.
-
-A candidate expands only when:
+A frequent candidate is expanded only when:
 
 ```text
 current size < MAX-SIZE
 ```
 
-A newly constructed candidate is queued only when both conditions hold:
+A constructed candidate is queued only when:
 
 ```text
 new size <= MAX-SIZE
 new size > old size
 ```
 
-The second condition removes unions where the chosen base was already present.
+The growth check rejects a union when the selected base was already present.
 
-## Connected Variant Generation
+## Connected Variants
 
-Suppose the current conjunction is:
+For a current conjunction containing `(var 0)` and `(var 1)`, the next fresh
+choice is `(var 2)`. A generated base remains connected only when at least one
+variable slot uses an existing choice.
 
-```metta
-((Parent (var 0) (var 1)))
-```
+The mapping cases are:
 
-and the normalized base is:
+- repeated source variable: use one existing choice in both slots;
+- distinct variables: left existing/right any, or left fresh/right existing;
+- one variable and one constant: the variable must use an existing choice;
+- two constants: no connected mapping is generated.
 
-```metta
-(Parent (var 0) (var 1))
-```
+Disconnected variants are never created, so no later connectivity filter is
+required.
 
-The scanner finds the existing variables `(var 0)` and `(var 1)`. Because
-indices are contiguous, it proposes each successor and removes proposals that
-already exist. The remaining successor is the one fresh choice, `(var 2)`.
+## Canonicalization
 
-Choices are therefore:
+The shared `canonicalize-indexed-conjunction` callable performs three staged
+operations:
 
-```text
-(var 0) existing
-(var 1) existing
-(var 2) fresh
-```
+1. `sort-atom`;
+2. `indices_to_vars`;
+3. `vars_to_indices`.
 
-A base variant is connected when at least one variable slot chooses an
-`existing` variable. The implementation generates only such mappings:
+They remain separate because quoted list results cannot safely be nested.
+Alpha-equivalent candidates then become identical facts and deduplicate
+naturally. The shared `conjunction-size` callable measures the result.
 
-- repeated source variable: one existing choice is used in both slots;
-- distinct source variables: left existing/right any, or left fresh/right
-  existing;
-- one variable plus one constant: the variable must choose existing;
-- two constants: no connected mapping exists.
+## Reused Rule Shapes
 
-This directly excludes `(Parent (var 2) (var 2))`, whose only variable is
-fresh, without creating a connectivity fact and later deleting it.
+The expansion also specializes these common callables:
 
-For example, the mapping:
+- `drop-matched` for cleanup;
+- `replace-matched` for one-fact state transitions;
+- `emit-from-matches-2/3/4` for join-and-emit rules.
 
-```text
-left  -> (var 1) existing
-right -> (var 2) fresh
-```
+## Test
 
-creates:
-
-```metta
-(Parent (var 1) (var 2))
-```
-
-Unioning that base with the old conjunction creates the connected chain:
-
-```metta
-((Parent (var 0) (var 1))
- (Parent (var 1) (var 2)))
-```
-
-## Repeated Variables
-
-The base shape matters. For:
-
-```metta
-(Knows (var 0) (var 0))
-```
-
-both occurrences came from the same source variable, so they must receive the
-same output choice. A cleanup-wrapped `freq-source-same` relationship records
-this equality. The same-source mapping rule emits `(Knows V V)` only; it never
-emits `(Knows V W)`.
-
-## Canonicalization And Deduplication
-
-The raw union passes through three grounded operations:
-
-1. `sort-atom` gives conjunction atoms a stable order.
-2. `indices_to_vars` restores real variable identity.
-3. `vars_to_indices` reindexes by first occurrence.
-
-These calls remain separate because quoted list results are not safely
-composable as one nested MM2 expression. After the three stages,
-alpha-equivalent candidates become the same exact fact and MORK's set behavior
-deduplicates them. The standalone implementation obtains these stages from the
-shared `canonicalize-indexed-conjunction` callable and measures the result with
-the shared `conjunction-size` callable.
-
-## Cleanup
-
-Build state that must survive several mapping stages is stored once inside a
-`freq-cleanup` wrapper. Mapping rules match the nested shape, choice, or source
-relationship directly. At priority `430`, one generic rule removes each
-wrapper. Facts used by only one next stage are consumed directly. Priority
-`900` removes `freq-base` after every recursively queued lower-priority cycle
-has completed. The standalone implementation uses the shared `drop-matched`,
-`replace-matched`, and `emit-from-matches-2/3/4` callables for equivalent
-simple cleanup, state-transition, and join rules.
-
-The final test outputs contain public `frequent-pattern` facts but no `freq-*`
-facts.
-
-## Tests
-
-The executable example is
-`tests/frequent-miner/conjunction-expansion-test.metta`. It covers constant
-slots, connected size-2 and size-3 parent chains, repeated variables, and
-representative canonical outputs. The test loads
-`src/common-utils/utils.metta` before `src/frequent-miner.metta` and reuses
-`data/ugly-sodaDrinker.metta`.
-
-Run them with:
+`tests/frequent-miner/conjunction-expansion-test.metta` loads the existing
+`data/ugly-sodaDrinker.metta` fixture, common utilities, and the standalone
+source.
 
 ```sh
 scripts/run-tests.sh tests/frequent-miner/conjunction-expansion-test.metta
 ```
 
-The implementation currently accepts triplet atoms. `MAX-SIZE` limits the
-number of conjuncts, not the arity of each seed atom.
+The current component accepts triplet atoms. `MAX-SIZE` limits conjunct count,
+not seed arity.

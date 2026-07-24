@@ -13,6 +13,7 @@ docs/
   testing.md                 Test file format and runner workflow
 
 data/
+  freq-db.metta              Valuation test fixture
   ugly-sodaDrinker.metta     Shared mining and surprisingness fixture
 
 src/
@@ -20,7 +21,7 @@ src/
   conjunction-expansion-triplet.metta
                              Standalone triplet conjunction expansion
   surp.metta                 Current MM2 implementation of isurp-old
-  frequent-miner.metta       Frequent mining and connected expansion
+  frequent-miner.metta       Variable extraction and valuation utilities
 
 tests/
   frequent-miner/            Runnable frequent-miner test cases
@@ -68,9 +69,10 @@ Test files keep runner metadata in MM2 comments:
 
 See `docs/testing.md` for the full test guide.
 
-## Frequent Miner
+## Standalone Conjunction Expansion
 
-The frequent miner accepts triplet seed patterns plus two configuration facts:
+The standalone expander accepts triplet seed patterns plus two configuration
+facts:
 
 ```metta
 (INPUT MIN-SUPPORT 2)
@@ -78,22 +80,14 @@ The frequent miner accepts triplet seed patterns plus two configuration facts:
 (pattern 0 (Inheritance $x human))
 ```
 
-Its only public result is a canonical conjunction with support:
-
-```metta
-(frequent-pattern (, (Inheritance $a human)) 4)
-```
-
-Conjunction expansion is an internal stage of the `freq` module. It is not a
-third project module. See `docs/conjunction-expansion-walkthrough.md` for the
-algorithm and `justMine/` for worked examples.
-
-For isolated development, `src/conjunction-expansion-triplet.metta` exposes
-the same triplet expansion flow without loading or changing
-`src/frequent-miner.metta`. It reads the same `MIN-SUPPORT`, `MAX-SIZE`, seed,
-and active database facts. The caller loads `src/common-utils/utils.metta`
-alongside it. Its public result is:
+`src/conjunction-expansion-triplet.metta` is independent of
+`src/frequent-miner.metta`. Load `src/common-utils/utils.metta` alongside it.
+Its public result is:
 
 ```metta
 (expanded-conjunct size indexed-candidate support)
 ```
+
+`src/frequent-miner.metta` retains the existing variable-extraction,
+positional-lookup, and valuation callables used by `valuation-test.metta`.
+See `docs/conjunction-expansion-walkthrough.md` for the expansion algorithm.

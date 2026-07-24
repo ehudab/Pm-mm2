@@ -1,157 +1,103 @@
-# Frequent-Miner Definition Map
+# Standalone Expansion Definition Map
 
-This is a compact map from `src/frequent-miner.metta` definitions to the facts
-they transform. For the full algorithm, read
-`docs/conjunction-expansion-walkthrough.md`.
-
-The standalone `src/conjunction-expansion-triplet.metta` follows the same
-route, but intentionally replaces simple local wrapper definitions with
-callables from `src/common-utils/utils.metta`:
-
-| Repeated rule shape | Shared callable |
-| --- | --- |
-| match and remove | `drop-matched` |
-| replace one state fact | `replace-matched` |
-| join facts and emit one fact | `emit-from-matches-2/3/4` |
-| sort and alpha-normalize an indexed conjunction | `canonicalize-indexed-conjunction` |
-| measure the resulting conjunction | `conjunction-size` |
-
-The sections below retain the `freq-*` names because they document the
-integrated frequent-miner implementation, which remains separate.
+This is a compact map of the facts transformed by
+`src/conjunction-expansion-triplet.metta`. Generic operations come from
+`src/common-utils/utils.metta`.
 
 ## Support Cycle
 
 ```text
-freq-pending
-  -> freq-support
-  -> freq-support-pass
-  -> frequent-pattern + freq-expand-check
+ce-pending
+  -> ce-support
+  -> ce-support-pass
+  -> expanded-conjunct + ce-expand-check
 ```
 
-- `freq-support-fn` creates the count query and schedules the rest of the
-  current cycle.
-- `freq-schedule-filter-fn` installs support pass/save/drop rules.
-- `freq-support-pass-fn` compares support with `INPUT MIN-SUPPORT`.
-- `freq-save-pass-fn` emits the public result and requests a depth check.
-- `freq-drop-fail-fn` consumes the failed branch.
-
-Example:
-
-```text
-freq-pending 1 ((Inheritance (var 0) human))
-  -> support 4
-  -> 4 >= 2
-  -> (frequent-pattern (, (Inheritance $a human)) 4)
-```
+- `ce-support-fn` starts one candidate cycle.
+- `count-indexed-conjunction-support` produces the support.
+- `support-at-least` applies `MIN-SUPPORT`.
+- `ce-save-pass-fn` emits the public result and requests expansion.
 
 ## Expansion Decision
 
 ```text
-freq-expand-check
-  -> freq-expand-pass
-  -> freq-expand-todo
+ce-expand-check
+  -> ce-expand-pass
+  -> ce-expand-todo
 ```
 
-- `freq-expand-pass-fn` checks `size < MAX-SIZE`.
-- `freq-expand-todo-fn` queues a passing candidate for construction.
-- `freq-drop-expand-fn` consumes a candidate already at maximum size.
+`ce-expand-pass-fn` checks `size < MAX-SIZE`. The passing state is promoted
+with `replace-matched`; the failed state is removed with `drop-matched`.
 
 ## Pair And Scan
 
 ```text
-freq-expand-todo + freq-base
-  -> freq-expand-pair
-  -> freq-scan + partial left shape
-  -> completed base shape
-  -> freq-conjunct-atom
-  -> freq-var-choice ... existing
+ce-expand-todo + ce-base
+  -> ce-expand-pair
+  -> ce-scan
+  -> ce-conjunct-atom
+  -> ce-var-choice ... existing
 ```
 
-- `freq-expand-pair-fn` pairs each expandable conjunction with every base.
-- `freq-pair-details-fn` starts the atom cursor and classifies the left base
-  slot.
-- `freq-scan-fn` walks an arbitrary number of triplet conjuncts.
-- `freq-left-choice-fn` and `freq-right-choice-fn` record indexed variables
-  found in either argument position.
-- `freq-complete-base-shape-fn` consumes the partial left shape, classifies the
-  right slot, and writes the completed shape.
+- `emit-from-matches-2` pairs each conjunction with every base.
+- `ce-pair-details-fn` starts the cursor and base-shape classification.
+- `ce-scan-fn` walks every conjunct.
+- left and right variable choices use specialized `emit-from-matches-2`
+  callables.
 
 ## Fresh Choice
 
 ```text
-existing v0 -> propose v1 -> drop because existing
-existing v1 -> propose v2 -> keep as fresh
+existing v0 -> propose v1 -> remove because existing
+existing v1 -> propose v2 -> save as fresh
 ```
 
-- `freq-fresh-candidate-fn` proposes every successor.
-- `freq-drop-used-fresh-fn` removes successors already in the conjunction.
-- `freq-save-fresh-fn` saves the remaining next index.
-- `freq-source-relation-fn` records whether a two-variable base repeats the
-  same source variable.
+- `ce-fresh-candidate-fn` proposes successors.
+- `ce-drop-used-fresh-fn` removes already-used successors.
+- `replace-matched` promotes the remaining successor to a fresh choice.
+- `ce-source-relation-fn` preserves repeated-variable equality.
 
 ## Connected Mapping
 
-The mapping functions emit `freq-connected-base` directly:
+`emit-from-matches-3/4` produces `ce-connected-base` facts for:
 
-| Definition | Accepted mapping |
+| Case | Accepted assignment |
 | --- | --- |
-| `freq-map-same-fn` | repeated source, one existing output in both slots |
-| `freq-map-distinct-left-fn` | left existing, right existing or fresh |
-| `freq-map-distinct-right-fn` | left fresh, right existing |
-| `freq-map-left-slot-fn` | left variable chooses existing; right constant stays |
-| `freq-map-right-slot-fn` | right variable chooses existing; left constant stays |
+| repeated source | one existing output in both slots |
+| distinct sources, left branch | left existing; right existing or fresh |
+| distinct sources, right branch | left fresh; right existing |
+| variable plus constant | variable existing; constant unchanged |
 
-There is no disconnected-map fact and no connectivity truth table. A mapping
-that uses only fresh variables is never created.
+An all-fresh assignment is not generated.
 
 ## Candidate Route
 
 ```text
-freq-connected-base
-  -> freq-raw-candidate
-  -> freq-sorted-candidate
-  -> freq-candidate-vars
-  -> freq-candidate
-  -> freq-candidate-size
-  -> freq-candidate-pass
-  -> freq-pending
+ce-connected-base
+  -> ce-raw-candidate
+  -> ce-candidate
+  -> ce-candidate-size
+  -> ce-candidate-pass
+  -> ce-pending
 ```
 
-- `freq-build-candidate-fn` unions the connected base with the conjunction.
-- `freq-sort-candidate-fn`, `freq-candidate-to-vars-fn`, and
-  `freq-alpha-candidate-fn` canonicalize it.
-- `freq-candidate-size-fn` measures the canonical candidate.
-- `freq-candidate-pass-fn` combines maximum-size and growth checks.
-- `freq-queue-candidate-fn` restarts `freq-support-fn` for a passing candidate.
-- `freq-drop-candidate-fn` consumes a duplicate/non-growing or oversized one.
+- `ce-build-candidate-fn` unions the base and current conjunction.
+- `canonicalize-indexed-conjunction` sorts and alpha-normalizes it.
+- `conjunction-size` measures it.
+- `ce-candidate-pass-fn` checks growth and `MAX-SIZE`.
+- `ce-queue-candidate-fn` starts the next support cycle.
 
-## Why Scheduler Definitions Remain
+## Shared Callables
 
-MORK consumes an `exec` when it runs, so later candidate sizes need freshly
-scheduled rule instances. Also, substituting every large `DEF` into one rule
-exceeds MORK's 64-variable limit. The scheduler definitions are therefore
-runtime requirements, not separate business-logic modules.
+| Repeated rule shape | Utility |
+| --- | --- |
+| count indexed support | `count-indexed-conjunction-support` |
+| compare support and threshold | `support-at-least` |
+| match and remove | `drop-matched` |
+| replace one fact | `replace-matched` |
+| join facts and emit one fact | `emit-from-matches-2/3/4` |
+| canonicalize an indexed conjunction | `canonicalize-indexed-conjunction` |
+| measure a conjunction | `conjunction-size` |
 
-Every scheduled priority still has the required shape:
-
-```metta
-(exec (freq NNN descriptive-label) ...)
-```
-
-## Public Versus Temporary Facts
-
-Public:
-
-```metta
-(frequent-pattern $pattern $support)
-```
-
-Temporary:
-
-```text
-every predicate beginning with freq-
-```
-
-Temporary facts are consumed by their next stage, stored once inside a cleanup
-wrapper removed by the generic build cleanup, or removed by final priority
-`freq 900 cleanup-bases`.
+Temporary `ce-*`, cleanup-wrapper, request, and canonicalization facts are
+consumed before the run finishes.
