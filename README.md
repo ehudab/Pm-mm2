@@ -22,6 +22,7 @@ src/
                              Standalone triplet conjunction expansion
   surp.metta                 Current MM2 implementation of isurp-old
   frequent-miner.metta       Variable extraction and valuation utilities
+  dummy.metta                Scratch file
 
 tests/
   frequent-miner/            Runnable frequent-miner test cases
@@ -29,6 +30,9 @@ tests/
 
 scripts/
   run-tests.sh               Test runner for *-test.metta files
+
+.github/workflows/
+  tests.yml                  CI workflow for building MORK and running tests
 ```
 
 ## Dependencies

@@ -286,8 +286,8 @@ Use `DEF` for internal reusable rule bodies, recursive walkers, helper expansion
 Example:
 
 ```metta
-(DEF freq-scan-fn
-  (, (freq-scan $id $path $node))
+(DEF gv-expand
+  (, (gv-visit $id $path $node))
   (O
     ...))
 ```
