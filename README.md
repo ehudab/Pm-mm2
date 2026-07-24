@@ -28,6 +28,9 @@ tests/
 
 scripts/
   run-tests.sh               Test runner for *-test.metta files
+
+.github/workflows/
+  tests.yml                  CI workflow for building MORK and running tests
 ```
 
 ## Dependencies
