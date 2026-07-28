@@ -29,6 +29,6 @@
 
 (EXPECTED-RESULT indexed-pattern (indexed-pattern-of (, (Inheritance $a man) (Inheritance $a ugly)) ((Inheritance (var 0) man) (Inheritance (var 0) ugly))))
 
-(EXPECTED-RESULT ji-interval (ji-prob-est-interval-of ((((Inheritance (var 0) man)) ((Inheritance (var 0) ugly)))) 0.125 0.125))
+(EXPECTED-RESULT ji-interval (ji-prob-est-interval-of ((((Inheritance (var 0) man)) ((Inheritance (var 0) ugly)))) 0.0625 0.0625))
 
-(EXPECTED-RESULT isurp-pipeline (isurp-new-of (, (Inheritance $a man) (Inheritance $a ugly)) 0.0625))
+(EXPECTED-RESULT isurp-pipeline (isurp-new-of (, (Inheritance $a man) (Inheritance $a ugly)) 0.0))

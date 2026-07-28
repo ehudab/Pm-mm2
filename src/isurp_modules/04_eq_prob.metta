@@ -36,6 +36,7 @@
 ;;
 ;;   (eq-joint-var $partition $var)
 ;;   (eq-value-count $partition $block $var $count)
+;;   (eq-connected-block-count $partition $var $count)
 ;;   (abstractness-sort-request $partition $var)
 ;;   (eq-var-factor $partition $var $factor)
 ;;   (eq-prob-of $partition $prob)
@@ -187,22 +188,39 @@
 
 ;; calculate-prob-for-vars / process-blocks:
 ;;
-;; The PeTTa source sorts connected blocks by abstractness, then divides by the
-;; value count/support of the previous more abstract block.  In this MM2 port,
-;; `03_abstractness_sort.metta` performs the abstractness choice and writes:
+;; The PeTTa source sorts connected blocks by abstractness, then walks every
+;; additional connected block after the first one.  Each extra block adds one
+;; equality correction.  If there is no earlier more-abstract block, PeTTa uses
+;; the whole DB size as the denominator.
+;;
+;; In this MM2 port, `03_abstractness_sort.metta` still materializes:
 ;;
 ;;   (most-abstract-block-support $partition $var $block $count)
 ;;
-;; This rule turns that count into the per-variable equality correction:
+;; for debugging and future exact value-count support.  The current PeTTa-like
+;; executable path below uses the DB-size fallback and the number of connected
+;; blocks:
 ;;
-;;   factor(var) = 1 / support(most abstract connected block)
+;;   factor(var) = 1 / DB-SIZE ^ (connected-block-count(var) - 1)
 (exec (surp 057 eq-abstractness-request)
     (, (eq-joint-var $partition $var))
     (, (abstractness-sort-request $partition $var)))
 
-(exec (surp 070 eq-var-factor)
+(exec (surp 058 eq-connected-block-count)
     (, (eq-joint-var $partition $var)
-       (most-abstract-block-support $partition $var $most-abstract-block $count))
+       (exec (surp 058 eq-connected-block-count) $src $sink))
+    (,
+        (exec (surp 058 eq-connected-block-count)
+            (, (eq-block-has-var $partition $block $var))
+            (O
+                (count
+                    (eq-connected-block-count $partition $var $count)
+                    $count
+                    $block)))))
+
+(exec (surp 070 eq-var-factor-2-blocks)
+    (, (eq-connected-block-count $partition $var 2)
+       (INPUT DB-SIZE $db-size))
     (O
         (pure
             (eq-var-factor $partition $var $factor)
@@ -210,7 +228,37 @@
             (f64_to_string
                 (div_f64
                     (f64_from_string 1.0)
-                    (f64_from_string $count))))))
+                    (f64_from_string $db-size))))))
+
+(exec (surp 070 eq-var-factor-3-blocks)
+    (, (eq-connected-block-count $partition $var 3)
+       (INPUT DB-SIZE $db-size))
+    (O
+        (pure
+            (eq-var-factor $partition $var $factor)
+            $factor
+            (f64_to_string
+                (div_f64
+                    (f64_from_string 1.0)
+                    (product_f64
+                        (f64_from_string $db-size)
+                        (f64_from_string $db-size)))))))
+
+(exec (surp 070 eq-var-factor-4-blocks)
+    (, (eq-connected-block-count $partition $var 4)
+       (INPUT DB-SIZE $db-size))
+    (O
+        (pure
+            (eq-var-factor $partition $var $factor)
+            $factor
+            (f64_to_string
+                (div_f64
+                    (f64_from_string 1.0)
+                    (product_f64
+                        (product_f64
+                            (f64_from_string $db-size)
+                            (f64_from_string $db-size))
+                        (f64_from_string $db-size)))))))
 
 
 ;; eq-prob finalization:

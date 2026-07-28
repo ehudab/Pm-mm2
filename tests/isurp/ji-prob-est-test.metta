@@ -34,4 +34,4 @@
 (Inheritance Allen ugly)
 (Inheritance Lily ugly)
 
-(EXPECTED-RESULT ji-prob-est (ji-prob-est-of (((Inheritance (var 0) man)) ((Inheritance (var 0) ugly))) 0.125))
+(EXPECTED-RESULT ji-prob-est (ji-prob-est-of (((Inheritance (var 0) man)) ((Inheritance (var 0) ugly))) 0.0625))
