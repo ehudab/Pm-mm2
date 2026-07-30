@@ -39,40 +39,33 @@
         (+ (exec (surp 014 prob) $src-of-prob $sink-of-prob))))
 
 
-;; The generic `vars_to_indices` helper does not reliably index variables after
-;; the input pattern has already been captured by an exec variable, so the active
-;; rules below index the common miner pattern shape directly:
+;; Normalize the raw comma pattern with the shared `vars_to_indices` helper.
 ;;
-;;   (, ($rel1 $x $arg1) ($rel2 $x $arg2) ...)
-;;      -> (($rel1 (var 0) $arg1) ($rel2 (var 0) $arg2) ...)
+;; `vars_to_indices` preserves variable identity, but it returns the full comma
+;; expression:
 ;;
-;; The repeated `$x` in the source side is a real MORK variable, so these rules
-;; only fire when the same input variable is shared across the clauses.
-(exec (surp 020 index-pattern-1)
-    (, (INPUT PATTERN ((, ($rel1 $x $arg1)) $support)))
-    (, (indexed-pattern (($rel1 (var 0) $arg1)))
-       (indexed-pattern-of (, ($rel1 $x $arg1)) (($rel1 (var 0) $arg1)))))
+;;   (, (Inheritance (var 0) man) ...)
+;;
+;; Partitioning expects only the clause list, so `cdr-atom` removes the leading
+;; comma marker.
+(exec (surp 020 index-pattern)
+    (, (INPUT PATTERN ($pattern $support)))
+    (O
+        (pure
+            (indexed-comma-pattern $indexed-comma-pattern)
+            $indexed-comma-pattern
+            (vars_to_indices (' $pattern)))))
 
-(exec (surp 020 index-pattern-2)
-    (, (INPUT PATTERN ((, ($rel1 $x $arg1)
-                           ($rel2 $x $arg2)) $support)))
-    (, (indexed-pattern (($rel1 (var 0) $arg1)
-                         ($rel2 (var 0) $arg2)))
-       (indexed-pattern-of (, ($rel1 $x $arg1)
-                              ($rel2 $x $arg2))
-                           (($rel1 (var 0) $arg1)
-                            ($rel2 (var 0) $arg2)))))
+(exec (surp 021 index-pattern-list)
+    (, (INPUT PATTERN ($pattern $support))
+       (indexed-comma-pattern $indexed-comma-pattern))
+    (O
+        (pure
+            (indexed-pattern-for $pattern $indexed-pattern)
+            $indexed-pattern
+            (cdr-atom (' $indexed-comma-pattern)))))
 
-(exec (surp 020 index-pattern-3)
-    (, (INPUT PATTERN ((, ($rel1 $x $arg1)
-                           ($rel2 $x $arg2)
-                           ($rel3 $x $arg3)) $support)))
-    (, (indexed-pattern (($rel1 (var 0) $arg1)
-                         ($rel2 (var 0) $arg2)
-                         ($rel3 (var 0) $arg3)))
-       (indexed-pattern-of (, ($rel1 $x $arg1)
-                              ($rel2 $x $arg2)
-                              ($rel3 $x $arg3))
-                           (($rel1 (var 0) $arg1)
-                            ($rel2 (var 0) $arg2)
-                            ($rel3 (var 0) $arg3)))))
+(exec (surp 022 expose-indexed-pattern)
+    (, (indexed-pattern-for $pattern $indexed-pattern))
+    (, (indexed-pattern $indexed-pattern)
+       (indexed-pattern-of $pattern $indexed-pattern)))
