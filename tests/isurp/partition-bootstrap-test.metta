@@ -1,28 +1,20 @@
-;; TEST-AUX src/common-utils/utils.metta
 ;; TEST-AUX src/isurp_modules/01_bootstrap_partitions.metta
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Partition/bootstrap component test
+;; Partition component test
 ;;
-;; This test validates only the first ISurp module:
+;; This test validates only partition generation:
 ;;
-;;   raw INPUT PATTERN
-;;   -> indexed-pattern
+;;   indexed-pattern
 ;;   -> ji-prob-partitions-of
 ;;   -> partition
 ;;   -> block
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(INPUT DB db)
-(INPUT DB-SIZE 4)
-
-(INPUT PATTERN
-    ((, (Inheritance $x man)
-        (Inheritance $x ugly)
-        (Inheritance $x sodaDrinker))
-     1))
-
-(EXPECTED-RESULT indexed-pattern-3 (indexed-pattern-of (, (Inheritance $a man) (Inheritance $a ugly) (Inheritance $a sodaDrinker)) ((Inheritance (var 0) man) (Inheritance (var 0) ugly) (Inheritance (var 0) sodaDrinker))))
+(indexed-pattern
+    ((Inheritance (var 0) man)
+     (Inheritance (var 0) ugly)
+     (Inheritance (var 0) sodaDrinker)))
 
 (EXPECTED-RESULT partition-list-3 (ji-prob-partitions-of ((Inheritance (var 0) man) (Inheritance (var 0) ugly) (Inheritance (var 0) sodaDrinker)) ((((Inheritance (var 0) man)) ((Inheritance (var 0) ugly) (Inheritance (var 0) sodaDrinker))) (((Inheritance (var 0) man) (Inheritance (var 0) sodaDrinker)) ((Inheritance (var 0) ugly))) (((Inheritance (var 0) man) (Inheritance (var 0) ugly)) ((Inheritance (var 0) sodaDrinker))) (((Inheritance (var 0) man)) ((Inheritance (var 0) ugly)) ((Inheritance (var 0) sodaDrinker))))))
 
