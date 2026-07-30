@@ -1,4 +1,5 @@
 ;; TEST-AUX src/common-utils/utils.metta
+;; TEST-AUX src/isurp_modules/00_input_bootstrap.metta
 ;; TEST-AUX src/isurp_modules/01_bootstrap_partitions.metta
 ;; TEST-AUX src/isurp_modules/02_block_support.metta
 ;; TEST-AUX src/isurp_modules/03_abstractness_sort.metta
