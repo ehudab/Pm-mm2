@@ -24,10 +24,10 @@
        ((total-counts $db-name $pattern -> total-count-of) $src-of-tc $sink-of-tc)
        ((prob $pattern $db-name -> prob-of) $src-of-prob $sink-of-prob))
     (O
-        (+ (exec (surp 102 ) $src-of-count $sink-of-count))
-        (+ (exec (surp 102 ) $src-of-cnj $sink-of-cnj))
-        (+ (exec (surp 103 ) $src-of-tc $sink-of-tc))
-        (+ (exec (surp 104 ) $src-of-prob $sink-of-prob))
+        (+ (exec (surp 102 count-db) $src-of-count $sink-of-count))
+        (+ (exec (surp 102 count-conjuncts) $src-of-cnj $sink-of-cnj))
+        (+ (exec (surp 103 total-counts) $src-of-tc $sink-of-tc))
+        (+ (exec (surp 104 prob) $src-of-prob $sink-of-prob))
         (pure
             (indexed-pattern $indexed-copy)
             $indexed-copy
