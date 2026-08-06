@@ -4,19 +4,19 @@
 
 ;; Count all db facts in the main db.
 ((count-db $db-name -> $out)
-    (, ($db-name $fact))
+    (, (db-fact $db-name $fact))
     (O
         (count ($out $db-name $count) $count $fact)))
 
 ;; Count conjuncts in a pattern.
 ((count-conjuncts $pattern -> $out)
-    (, (INPUT PATTERN ($pattern $support)))
+    (,)
     (O
         (pure
             ($out $pattern $count)
             $count
             (size-atom
-                (cdr-atom (' $pattern))))))
+                (exclude-item , (' $pattern))))))
 
 ;; Count matches for an indexed conjunction. The caller supplies both an
 ;; opaque context value and the complete three-field priority for the count
