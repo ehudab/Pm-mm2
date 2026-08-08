@@ -88,7 +88,7 @@ jobs:
         run: hyperon-miner-mm2/scripts/setup-mork-mm2-deps.sh MORK MM2-Helper mm2-stdlib
 
       - name: Use portable MORK CPU target
-        run: perl -0pi -e 's/rustflags = \\["-C", "target-cpu=native", "-Awarnings"\\]/rustflags = ["-C", "target-cpu=x86-64", "-C", "target-feature=+aes,+sse2", "-Awarnings"]/g' MORK/.cargo/config.toml
+        run: perl -0pi -e 's/rustflags = \["-C", "target-cpu=native", "-Awarnings"\]/rustflags = ["-C", "target-cpu=x86-64", "-C", "target-feature=+aes,+sse2", "-Awarnings"]/g' MORK/.cargo/config.toml
 
       - name: Build MORK CLI
         working-directory: MORK/kernel
