@@ -1,6 +1,6 @@
 (exec (jsd 112 universe-count)
     (, (INPUT DB $db-name) (INPUT PATTERN ($pattern $support))
-         ((universe-count $db-name $block -> universe-count-of) $src-of-uvc $sink-of-uvc))
+         ((universe-count $db-name $pattern -> universe-count-of) $src-of-uvc $sink-of-uvc))
          
     (,
         (exec (jsd 114 universe-count) $src-of-uvc $sink-of-uvc)
