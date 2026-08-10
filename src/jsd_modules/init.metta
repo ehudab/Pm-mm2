@@ -1,4 +1,4 @@
-(exec (jsd 101 start-jsd)
+(exec (jsd 001 start-jsd)
     (, (INPUT DB $db-name)
        (INPUT PATTERN ($pattern $support))
        ((count-db $db-name -> db-size) $src-of-count $sink-of-count)
@@ -13,7 +13,7 @@
                 (cdr-atom (' $pattern))))))
 
 
-(exec (jsd 105 partitions-of)
+(exec (jsd 005 partitions-of)
     (, (indexed-pattern $indexed-pattern))
     (O
         (pure
@@ -22,9 +22,9 @@
             (partitions (' $indexed-pattern)))))
 
 
-(exec (jsd 106 extract-partiton)
+(exec (jsd 006 extract-partiton)
     (, (partitions-of $indexed-pattern $indexed-partition)
-       (exec (jsd 106 extract-partiton) $src $sink))
+       (exec (jsd 006 extract-partiton) $src $sink))
     (O
         (pure
             (partition $car)
@@ -35,16 +35,16 @@
             $cdr
             (cdr-atom (' $indexed-partition)))
         (- (partitions-of $indexed-pattern $indexed-partition))
-        (+ (exec (jsd 106 extract-partiton) $src $sink))))
+        (+ (exec (jsd 006 extract-partiton) $src $sink))))
 
 ;; Copy partitions before expanding them into blocks.
-(exec (jsd 107 copy-partition)
+(exec (jsd 007 copy-partition)
     (, (partition $partition))
     (, (copy-of-partition $partition $partition)))
 
-(exec (jsd 108 extract-blocks)
+(exec (jsd 008 extract-blocks)
     (, (copy-of-partition $partition $partition-copy)
-       (exec (jsd 108 extract-blocks) $src $sink))
+       (exec (jsd 008 extract-blocks) $src $sink))
     (O
         (pure
             (block $partition $block)
@@ -55,6 +55,6 @@
             $cdr
             (cdr-atom (' $partition-copy)))
         (- (copy-of-partition $partition $partition-copy))
-        (+ (exec (jsd 108 extract-blocks) $src $sink))))
+        (+ (exec (jsd 008 extract-blocks) $src $sink))))
 
 
