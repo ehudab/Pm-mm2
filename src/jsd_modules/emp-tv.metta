@@ -1,3 +1,8 @@
+;; ========================================================================
+;; Label: universe-count
+;; Purpose: Get total relevant items
+;; ========================================================================
+
 (exec (jsd 112 universe-count)
     (, (INPUT DB $db-name) (INPUT PATTERN ($pattern $support))
          ((universe-count $db-name $pattern -> universe-count-of) $src-of-uvc $sink-of-uvc))
@@ -7,6 +12,17 @@
     )
 
 )
+
+
+;; ========================================================================
+;; Label: emp-tv
+;; Purpose: Calculate empirical truth value for a pattern in database
+;; 1. Calculate a confidence value based on a universe-count using a smoothing constant (DEFAULT_K).
+;;      - confidence = (x / (x + Default_k) * 0.1)
+;; 2. Calculate a mean value based on the support and universe-count.
+;;      - mean = (support / universe-count)
+;; 3. Return the empirical truth value as a pair of mean and confidence.
+;; ========================================================================
 
 
 (exec (jsd 115 emp-tv-confidence)

@@ -1,3 +1,10 @@
+
+;; ========================================================================
+;; Label: universe-count
+;; Purpose: Get total relevant items for the expanded blocks of a pattern 
+;;          from its partitions
+;; ========================================================================
+
 (exec (jsd 200 emp-tv-blocks)
     (, (INPUT DB $db-name) (support-of $pattern $db-name $support)
          ((universe-count $db-name $pattern -> universe-count-of) $src-of-uvc $sink-of-uvc)
@@ -9,6 +16,17 @@
     )
 )
 
+
+;; ========================================================================
+;; Label: emp-tv
+;; Purpose: Calculate empirical truth value for the blocks expanded from a 
+;;          pattern's partitions in database. 
+;; 1. Calculate a confidence value based on a universe-count using a smoothing constant (DEFAULT_K).
+;;      - confidence = (x / (x + Default_k) * 0.1)
+;; 2. Calculate a mean value based on the support and universe-count.
+;;      - mean = (support / universe-count)
+;; 3. Return the empirical truth value as a pair of mean and confidence.
+;; ========================================================================
 
 (exec (jsd 201 emp-tv-confidence)
     (, (universe-count-of $pattern $db $uc) (CONSTANT DEFAULT_K $k))
@@ -37,6 +55,14 @@
     (, (EMPTV $pattern $db ($mean $conf)))
 )
 
+
+
+
+;; =============================================================================================
+;; Label: conf-to-count
+;; Purpose: Convert confidence to count using the formula
+;;          count = (confidence * default_k) / (1 - confidence)
+;; =============================================================================================
 (exec (jsd 210 conf-to-count)
     (, (EMPTV $pattern $db ($mean $conf)) (CONSTANT default_k $k))
     (O
@@ -53,6 +79,17 @@
         )
     )
 )
+
+;; =============================================================================================
+;; Label: beta-distribution
+;; Purpose: Calculate the parameters of a Beta distribution based on the given empirical TV (emptv) data.
+;; 
+;; - Extracts the strength, confidence, and count from the empirical data, then computes the positive count
+;; and uses prior alpha and beta values (both set to 1.0) to calculate the final alpha and beta parameters
+;; for the Beta distribution. The final alpha is the sum of the prior alpha and the positive count, while the
+;; final beta is the sum of the prior beta and the difference between the count and the positive count.
+;; ============================================================================================
+
 (exec (jsd 211 emp-alpha)
     (, (EMPTV $pattern $db ($mean $conf)) (emp-conf->count $conf $count) (CONSTANT prior-alpha $pa))
     (O
@@ -113,13 +150,16 @@
     (,  (emp-beta $pattern $db $beta) (emp-alpha $pattern $db $alpha) (beta-var $beta $alpha $b-var) (beta-mean $beta $alpha $b-mean))
     (, (beta-distribution ($beta $alpha) ($b-mean $b-var)))
 )
+
 (exec (jsd 216 mk-distribution)
     (, (beta-distribution ($beta $alpha) ($b-mean $b-var)) (emp-alpha $pattern $db $alpha) (emp-beta $pattern $db $beta))
     (, (mk-distribution $pattern $db ($b-mean $b-var)))
 )
 
 
-
+;; --------------------------------------------------------------------------------------------
+;; Calculate the mean for each Beta distribution.
+;; --------------------------------------------------------------------------------------------
 (exec (jsd 217 mean-acc) 
     (, (mk-distribution $block $db ($b-mean $b-var)) (block $partition $block))
     (, (mean-acc $partition $db 0))
@@ -149,6 +189,10 @@
     )
 )
 
+;; --------------------------------------------------------------------------------------------
+;; Calculate the overall average mean from the individual means.
+;; --------------------------------------------------------------------------------------------
+
 (exec (jsd 219 mean)
     (, (mean-acc $partition $db $acc))
     (O
@@ -159,6 +203,10 @@
         )
     )
 )
+
+;; ----------------------------------------------------------------------------------------------------------------------
+;; Calculate the relative variances using the individual means, variances, and the overall average mean.
+;; ----------------------------------------------------------------------------------------------------------------------
 
 (exec (jsd 219 rel-var)
     (, (block $partition $block) (mk-distribution $block $db ($b-mean $b-var)) (mk-stv-mean $partition $db $mean))
@@ -179,6 +227,9 @@
     (, (var-acc $partition $db 0))
 )
 
+;; --------------------------------------------------------------------------------------------
+;; Calculate the average variance from the combined variances.
+;; --------------------------------------------------------------------------------------------
 
 (exec (jsd 221 var-acc) 
     (, (var-acc $partition $db $acc) (exec (jsd 221 var-acc)   $src (O (pure $out $var (car $p)))))
@@ -213,6 +264,17 @@
         )
     )
 )
+
+;; ==========================================================================================================================
+;; Label: mk-stv
+;; Purpose: Creates a standard truth value (STV) using the provided mean and variance.
+;; 
+;; ==========================================================================================================================
+
+
+;; --------------------------------------------------------------------------------------------------------------------------
+;; Calculate the alpha and beta parameters based on the mean and variance.
+;; --------------------------------------------------------------------------------------------------------------------------
 
 (exec (jsd 223 avrg-tv)
     (, (mk-stv-var $partition $db $var) (mk-stv-mean $partition $db $mean))
@@ -251,6 +313,10 @@
     )
 )
 
+;; --------------------------------------------------------------------------------------------------------------------------
+;; Calculate the count and confidence values using these parameters.
+;; --------------------------------------------------------------------------------------------------------------------------
+
 (exec (jsd 224 mk-stv)
     (,  (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha) (CONSTANT prior-beta $pb) (CONSTANT prior-alpha $pa))
     (O
@@ -278,6 +344,15 @@
         )
     )
 )
+
+
+;; --------------------------------------------------------------------------------------------------------------------------
+;; Calculate mode which is determined based on the values of alpha and beta, following specific conditions.
+;; --------------------------------------------------------------------------------------------------------------------------
+
+
+
+;; compare the values of alpha and beta to determine the mode based on the conditions.
 
 (exec (jsd 226 comparisons)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha))
@@ -315,20 +390,30 @@
     )
 )
 
-;; Start with the base tree
+;; ------------------------------------------------------------------------------------------------------------------------------------------
+;; Conditions: 
+;; $mode = 
+;;   if (and (> $alpha 1) (> $beta 1)) (alpha - 1) / (alpha + beta - 2)
+;;   else if (and (<= $alpha 1) (> $beta 1)) 0
+;;   else if (and (== $beta 1) (< $alpha 1)) 1
+;;   else if (and (< $alpha 1) (< $beta 1)) $mean
+;; ------------------------------------------------------------------------------------------------------------------------------------------
 
 (exec (jsd 227 mk-stv-mode)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha))
     (, (mk-stv-mode $mean $var 1))  
 )
+;; Condition: if (and (< $alpha 1) (< $beta 1)) then mode = $mean
 (exec (jsd 228 mk-stv-mode)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha) (mk-stv-mode $mean $var 1) (is-lt $f-beta 1 true) (is-lt $f-alpha 1 true))
     (O (- (mk-stv-mode $mean $var 1)) (+ (mk-stv-mode $mean $var $mean)))  
 )
+;; Condition: if (and (<= $alpha 1) (> $beta 1)) then mode = 0
 (exec (jsd 229 mk-stv-mode)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha) (mk-stv-mode $mean $var 1) (is-gt $f-beta 1 true) (is-le $f-alpha 1 true))
     (O (- (mk-stv-mode $mean $var 1)) (+ (mk-stv-mode $mean $var 0)))  
 )
+;; Condition: if (and (> $alpha 1) (> $beta 1)) then mode = (alpha - 1) / (alpha + beta - 2)
 (exec (jsd 230 mk-stv-mode)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha) (mk-stv-mode $mean $var 1) (is-gt $f-beta 1 true) (is-gt $f-alpha 1 true))
     (O (- (mk-stv-mode $mean $var 1)) 
@@ -345,15 +430,37 @@
     )  
 )
 
+
+;; Combine the mean, variance, mode, and confidence into a single standard truth value (STV) representation.
+
 (exec (jsd 231 mk-stv)
     (, (mk-stv-mode $mean $var $mode) (mk-stv-confidence $mean $var $confidence))
     (, (mk-stv $mean $var ($mode $confidence)))
 )
 
+
+;; --------------------------------------------------------------------------------------------------------------
+;; Label: pro-prob-without-joint
+;; Purpose: This function calculates the product of the probability over subpatterns
+;;          without considering the joint variables. It estimates the empirical truth value
+;;          for each subpattern and then computes the average of these truth values to derive
+;;          the final product of the probabilities.
+;;
+;; --------------------------------------------------------------------------------------------------------------
 (exec (jsd 232 pro-prob-without-joint)
     (, (mk-stv $mean $var ($mode $confidence)) (mk-stv-var $partition $db $var) (mk-stv-mean $partition $db $mean))
     (, (pro-prob-without-joint $partition $db ($mode $confidence)))
 )
+
+
+
+;; ---------------------------------------------------------------------------------------------------------------
+;; Label: ji-est-tv
+;; Purpose: Calculates the joint-independent truth value estimate (JITVE) for a pattern
+;;          based on a given partition. It assumes all blocks are independent but accounts
+;;          for joint variables shared across them.
+;;
+;; --------------------------------------------------------------------------------------------------------------
 
 (exec (jsd 233 ji-est-tv)
     (, (pro-prob-without-joint $partition $db ($mode $confidence)) (eq-prob-of $partition $prob))
@@ -378,6 +485,14 @@
 
 
 
+
+
+;; =============================================================================================
+;; Label: conf-to-count (for partitions)
+;; Purpose: Convert confidence to count using the formula
+;;          count = (confidence * default_k) / (1 - confidence)
+;;          Applied to joint-independent truth value estimates for partitions.
+;; =============================================================================================
 (exec (jsd 240 conf-to-count)
     (, (ji-est-tv $partition $db ($strength $conf)) (CONSTANT default_k $k))
     (O
@@ -394,6 +509,14 @@
         )
     )
 )
+
+;; =============================================================================================
+;; Label: est-alpha (for partitions)
+;; Purpose: Calculate the alpha parameter of a Beta distribution based on the joint-independent 
+;;          truth value estimate. Uses the formula:
+;;          alpha = prior-alpha + (strength * count)
+;;          where count is derived from the confidence using the conf-to-count conversion.
+;; =============================================================================================
 (exec (jsd 241 est-alpha)
     (, (ji-est-tv $partition $db ($strength $conf)) (est-conf->count $conf $count) (CONSTANT prior-alpha $pa))
     (O
@@ -408,6 +531,13 @@
     )
 )
 
+;; =============================================================================================
+;; Label: est-beta (for partitions)
+;; Purpose: Calculate the beta parameter of a Beta distribution based on the joint-independent
+;;          truth value estimate. Uses the formula:
+;;          beta = (count + prior-beta) - (strength * count)
+;;          where count is derived from the confidence using the conf-to-count conversion.
+;; =============================================================================================
 (exec (jsd 242 est-beta)
     (, (ji-est-tv $partition $db ($strength $conf)) (est-conf->count $conf $count) (CONSTANT prior-beta $pb))
     (O
@@ -421,7 +551,13 @@
     )
 )
 
-
+;; =============================================================================================
+;; Label: est-beta-mean (for partitions)
+;; Purpose: Calculate the mean of a Beta distribution from its alpha and beta parameters.
+;;          Uses the formula:
+;;          beta-mean = alpha / (alpha + beta)
+;;          This represents the expected value of the Beta distribution.
+;; =============================================================================================
 (exec (jsd 243 est-beta-mean)
     (, (est-beta $partition $db $beta) (est-alpha $partition $db $alpha))
     (O
@@ -434,6 +570,14 @@
         )
     )
 )
+
+;; =============================================================================================
+;; Label: est-beta-var (for partitions)
+;; Purpose: Calculate the variance of a Beta distribution from its alpha and beta parameters.
+;;          Uses the formula:
+;;          beta-var = (alpha * beta) / ((alpha + beta)^2 * (alpha + beta + 1))
+;;          This represents the spread/uncertainty of the Beta distribution.
+;; =============================================================================================
 (exec (jsd 244 est-beta-var)
     (, (est-beta $partition $db $beta) (est-alpha $partition $db $alpha))
     (O
@@ -449,6 +593,8 @@
         )
     )
 )
+
+
 
 (exec (jsd 245 est-beta-distribution)
     (,  (est-beta $partition $db $beta) (est-alpha $partition $db $alpha) (est-beta-var $beta $alpha $b-var) (est-beta-mean $beta $alpha $b-mean))
@@ -519,8 +665,10 @@
     (, (var-acc $pattern $db 0))
 )
 
-
-
+;; =============================================================================================
+;; Label: mk-stv-var
+;; Purpose: Convert accumulated variance into the final STV variance estimate.
+;; ============================================================================================
 
 (exec (jsd 251 var-acc) 
     (, (var-acc $pattern $db $acc) (partitions-of $pattern $partitions) (exec (jsd 251 var-acc)   $src (O (pure $out $var (car $p)))))
@@ -555,6 +703,11 @@
         )
     )
 )
+
+;; =============================================================================================
+;; Label: avrg-tv
+;; Purpose: Derive beta and alpha parameters from the STV mean and variance.
+;; =============================================================================================
 
 (exec (jsd 253 avrg-tv)
     (, (est-mk-stv-var $pattern $db $var) (est-mk-stv-mean $pattern $db $mean))
@@ -593,6 +746,11 @@
     )
 )
 
+;; =============================================================================================
+;; Label: mk-stv
+;; Purpose: Build STV count and confidence values from beta/alpha estimates.
+;; =============================================================================================
+
 (exec (jsd 254 mk-stv)
     (,  (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha) (CONSTANT prior-beta $pb) (CONSTANT prior-alpha $pa))
     (O
@@ -620,6 +778,11 @@
         )
     )
 )
+
+;; =============================================================================================
+;; Label: comparisons
+;; Purpose: Compute comparison predicates used by the STV mode rules.
+;; =============================================================================================
 
 (exec (jsd 256 comparisons)
     (, (found-beta $mean $var $f-beta) (found-alpha $mean $var $f-alpha))
@@ -687,10 +850,20 @@
     )  
 )
 
+;; =============================================================================================
+;; Label: mk-stv-mode
+;; Purpose: Determine the STV mode from alpha and beta shape conditions.
+;; =============================================================================================
+
 (exec (jsd 261 mk-stv)
     (, (mk-stv-mode $mean $var $mode) (mk-stv-confidence $mean $var $confidence))
     (, (mk-stv $mean $var ($mode $confidence)))
 )
+
+;; =============================================================================================
+;; Label: do-ji-tv-est
+;; Purpose: Finalize the estimated STV for the given pattern and database.
+;; =============================================================================================
 
 (exec (jsd 262 do-ji-tv-est)
     (, (mk-stv $mean $var ($mode $confidence)) (est-mk-stv-var $pattern $db $var) (est-mk-stv-mean $pattern $db $mean))
