@@ -23,23 +23,25 @@
 
 
 (exec (jsd 006 extract-partiton)
-    (, (partitions-of $indexed-pattern $indexed-partition)
-       (exec (jsd 006 extract-partiton) $src $sink))
+    (, (partitions-of $indexed-pattern $indexed-partitions)
+       (exec (jsd 006 extract-partiton) $src (O (pure $out $var (car $ind-par)))))
     (O
         (pure
-            (partition $car)
-            $car
-            (car-atom (' $indexed-partition)))
-        (pure
-            (partitions-of $indexed-pattern $cdr)
-            $cdr
-            (cdr-atom (' $indexed-partition)))
-        (- (partitions-of $indexed-pattern $indexed-partition))
-        (+ (exec (jsd 006 extract-partiton) $src $sink))))
+            (exec (jsd 006 extract-partiton)
+                (,)
+                (O (+ (partition $indexed-pattern $partition)) 
+                    (+ (exec (jsd 006 extract-partiton) $src (O (pure $out $var (car (cdr $ind-par))))))
+                )
+            )
+            
+            $partition
+            (car (' $indexed-partitions))
+        )
+        ))
 
 ;; Copy partitions before expanding them into blocks.
 (exec (jsd 007 copy-partition)
-    (, (partition $partition))
+    (, (partition $indexed-pattern $partition))
     (, (copy-of-partition $partition $partition)))
 
 (exec (jsd 008 extract-blocks)
@@ -58,3 +60,27 @@
         (+ (exec (jsd 008 extract-blocks) $src $sink))))
 
 
+(exec (jsd 009 sup-num-query)
+    (, (block $partition $block) ((sup-num-query $block (jsd 009 sup-num-query) $db) $src $sink) (INPUT DB $db))
+    (, (exec (jsd 009 sup-num-query) $src $sink) (sup-num-query $block $db ()))
+)
+
+(exec (jsd 110 sup-num)
+    (, (block $partition $block) (sup-num-query $block $db $q) (INPUT DB $db))
+    (O
+        (pure
+            (exec (jsd 110 sup-num)
+                $query
+                (O
+                    (count 
+                        (support-of $block $db $sup)
+                        $sup
+                        ($query)
+                    )
+                )
+            )
+            $query
+            (indices_to_vars (cons , (' $q)))
+        )
+    )
+)
