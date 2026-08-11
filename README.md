@@ -10,6 +10,7 @@ run in one MORK atomspace.
 docs/
   data-model.md              Shared MM2 data model and priority conventions
   isurp-old-validation.md    Validation notes against PeTTa isurp-old
+  isurp-module-validation.md Modular newer ISurp implementation and validation
   testing.md                 Test file format and runner workflow
 
 data/
