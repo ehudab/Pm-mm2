@@ -447,4 +447,18 @@
   (O
     (+ (specialization-partial $id 1 ()))))
 
+(DEF specialization-extend
+  (, (specialization-partial $id $pos $partial)
+     (specialization-position $id $pos $path $var)
+     (shallow-abstraction-binding $id $path $var $value)
+     (spec-index-next $pos $next-pos)
+     (DEF specialization-extend $extend-p $extend-t)
+     (DEF specialization-finish $finish-p $finish-t))
+  (O
+    (- (specialization-partial $id $pos $partial))
+    (pure (specialization-partial $id $next-pos $next-partial) $next-partial
+      (append (' ($partial ($value)))))
+    (+ (exec (freq 510 specialization-extend) $extend-p $extend-t))
+    (+ (exec (freq 590 specialization-finish) $finish-p $finish-t))))
+
 
