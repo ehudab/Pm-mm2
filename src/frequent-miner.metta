@@ -442,9 +442,9 @@
 (spec-index-next 8 9)
 
 (DEF specialization-start
-  (, (run-specialization $id $pattern)
-     (specialization-position $id 1 $var))
+  (, (run-specialization $id $pattern))
   (O
+    (+ (specialization-position spec-test 1 (var 0)))
     (+ (specialization-partial $id 1 ()))))
 
 (DEF specialization-extend
@@ -484,8 +484,6 @@
 
 ; specialization cross-product smoke
 (run-specialization spec-test (Inheritance $x $y))
-
-(specialization-position spec-test 1 (var 0))
 
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Allen)
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Lily)
