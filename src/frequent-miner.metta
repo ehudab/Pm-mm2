@@ -412,3 +412,39 @@
   (O
     (+ (exec (freq 350 shallow-start) $start-p $start-t))
     (+ (exec (freq 360 shallow-step) $step-p $step-t))))
+
+; specialization
+;
+; This stage builds all combinations of shallow abstraction choices across the
+; variable positions of a pattern. It does not yet rewrite the original pattern;
+; it emits complete binding combinations that the replacement stage can consume.
+;
+; Request:
+;   (run-specialization $id $pattern)
+;
+; Inputs:
+;   (specialization-position $id $pos $path $var)
+;   (specialization-final-position $id $final-pos)
+;   (shallow-abstraction-binding $id $path $var $value)
+;
+; Result:
+;   (specialization-combination $id $bindings)
+;
+; Binding list item shape:
+;   (binding $path $var $value)
+(spec-index-next 1 2)
+(spec-index-next 2 3)
+(spec-index-next 3 4)
+(spec-index-next 4 5)
+(spec-index-next 5 6)
+(spec-index-next 6 7)
+(spec-index-next 7 8)
+(spec-index-next 8 9)
+
+(DEF specialization-start
+  (, (run-specialization $id $pattern)
+     (specialization-position $id 1 $path $var))
+  (O
+    (+ (specialization-partial $id 1 ()))))
+
+
