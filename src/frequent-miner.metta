@@ -463,7 +463,6 @@
 
 (DEF specialization-finish
   (, (specialization-partial $id $pos $partial)
-     (specialization-final-position $id $pos)
      (run-specialization $id $pattern))
   (O
     (- (specialization-partial $id $pos $partial))
@@ -486,7 +485,6 @@
 
 (specialization-position spec-test 1 (root arg/1) (var 0))
 (specialization-position spec-test 2 (root arg/2) (var 1))
-(specialization-final-position spec-test 3)
 
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Allen)
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Lily)
