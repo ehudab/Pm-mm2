@@ -471,4 +471,13 @@
     (pure (specialization-result $id $specialized-pattern) $specialized-pattern
       (substitute (' ($pattern $partial))))))
 
+(DEF specialization-combinations-fn
+  (, (run-specialization $id $pattern)
+     (DEF specialization-start $start-p $start-t)
+     (DEF specialization-extend $extend-p $extend-t)
+     (DEF specialization-finish $finish-p $finish-t))
+  (O
+    (+ (exec (freq 500 specialization-start) $start-p $start-t))
+    (+ (exec (freq 510 specialization-extend) $extend-p $extend-t))
+    (+ (exec (freq 590 specialization-finish) $finish-p $finish-t))))
 
