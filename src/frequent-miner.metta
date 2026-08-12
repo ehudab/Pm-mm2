@@ -443,21 +443,23 @@
 
 (DEF specialization-start
   (, (run-specialization $id $pattern)
-     (specialization-position $id 1 $path $var))
+     (specialization-position $id 1 $var))
   (O
     (+ (specialization-partial $id 1 ()))))
 
 (DEF specialization-extend
   (, (specialization-partial $id $pos $partial)
-     (specialization-position $id $pos $path $var)
+     (specialization-position $id $pos $var)
      (shallow-abstraction-binding $id $path $var $value)
      (spec-index-next $pos $next-pos)
      (DEF specialization-extend $extend-p $extend-t)
      (DEF specialization-finish $finish-p $finish-t))
   (O
     (- (specialization-partial $id $pos $partial))
+    (- (specialization-position $id $pos $var))
     (pure (specialization-partial $id $next-pos $next-partial) $next-partial
       (append (' ($partial ($value)))))
+    (+ (specialization-position $id $next-pos (var $pos)))
     (+ (exec (freq 510 specialization-extend) $extend-p $extend-t))
     (+ (exec (freq 590 specialization-finish) $finish-p $finish-t))))
 
@@ -483,8 +485,7 @@
 ; specialization cross-product smoke
 (run-specialization spec-test (Inheritance $x $y))
 
-(specialization-position spec-test 1 (root arg/1) (var 0))
-(specialization-position spec-test 2 (root arg/2) (var 1))
+(specialization-position spec-test 1 (var 0))
 
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Allen)
 (shallow-abstraction-binding spec-test (root arg/1) (var 0) Lily)
