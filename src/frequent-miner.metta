@@ -461,4 +461,14 @@
     (+ (exec (freq 510 specialization-extend) $extend-p $extend-t))
     (+ (exec (freq 590 specialization-finish) $finish-p $finish-t))))
 
+(DEF specialization-finish
+  (, (specialization-partial $id $pos $partial)
+     (specialization-final-position $id $pos)
+     (run-specialization $id $pattern))
+  (O
+    (- (specialization-partial $id $pos $partial))
+    (+ (specialization-combination $id $partial))
+    (pure (specialization-result $id $specialized-pattern) $specialized-pattern
+      (substitute (' ($pattern $partial))))))
+
 
