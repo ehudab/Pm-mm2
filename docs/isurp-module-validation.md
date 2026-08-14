@@ -186,7 +186,7 @@ with expected output:
 The matching MM2 test is:
 
 ```text
-tests/isurp/petta-corpus-validation-test.metta
+tests/isurp/isurp-validation-test.metta
 ```
 
 It loads the same `ugly_man_sodaDrinker` corpus facts into MORK, with:
@@ -213,19 +213,57 @@ The MM2 expected result is the same numeric value, materialized as a fact:
     1.9290123456790123e-5)
 ```
 
+The same file also validates the other `ugly_man_sodaDrinker` assertions from
+`hyperon-miner/experiments/validation/isurp-validation.metta`:
+
+```metta
+(isurp
+    (, (Inheritance $x man)
+       (Inheritance $x ugly)
+       (Inheritance $x sodaDrinker))
+    &db
+    True
+    1)
+;; => 0.8333333333333334
+
+(isurp
+    (, (Inheritance $x man)
+       (Inheritance $x ugly))
+    &db
+    False
+    1)
+;; => 0.000925925925925926
+```
+
+The coupled and true-nested PeTTa validations use separate MM2 test files
+because MORK test files load facts into one unscoped Space, while the PeTTa
+tests use separate database spaces (`&db`, `&dbc`, `&dbn`):
+
+```text
+tests/isurp/isurp-coupled-validation-test.metta
+tests/isurp/isurp-true-nested-validation-test.metta
+```
+
 Run it with:
 
 ```bash
-scripts/run-tests.sh tests/isurp/petta-corpus-validation-test.metta
+scripts/run-tests.sh \
+  tests/isurp/isurp-validation-test.metta \
+  tests/isurp/isurp-coupled-validation-test.metta \
+  tests/isurp/isurp-true-nested-validation-test.metta
 ```
 
 Expected result:
 
 ```text
-RUN  isurp/petta-corpus-validation-test.metta
-PASS isurp/petta-corpus-validation-test.metta
+RUN  isurp/isurp-validation-test.metta
+PASS isurp/isurp-validation-test.metta
+RUN  isurp/isurp-coupled-validation-test.metta
+PASS isurp/isurp-coupled-validation-test.metta
+RUN  isurp/isurp-true-nested-validation-test.metta
+PASS isurp/isurp-true-nested-validation-test.metta
 
-Total: 1
+Total: 3
 Failed: 0
 ```
 
@@ -353,7 +391,9 @@ eq-prob-test.metta
 input-bootstrap-test.metta
 isurp-pipeline-test.metta
 ji-prob-est-test.metta
-petta-corpus-validation-test.metta
+isurp-validation-test.metta
+isurp-coupled-validation-test.metta
+isurp-true-nested-validation-test.metta
 partition-bootstrap-test.metta
 pro-prob-wout-joint-test.metta
 ```
@@ -361,6 +401,6 @@ pro-prob-wout-joint-test.metta
 Expected runner summary:
 
 ```text
-Total: 10
+Total: 12
 Failed: 0
 ```

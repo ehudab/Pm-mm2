@@ -105,19 +105,36 @@
 
 ;; get-var / connected-subpatterns-with-var:
 ;;
-;; Scan direct arguments for `(var N)` markers in binary predicate atoms only:
+;; Scan supported binary predicate argument shapes for `(var N)` markers:
 ;;
 ;;   ($rel $left $right)
 ;;
 ;; The first element is treated as the link/predicate, so only the two argument
 ;; positions are checked.  This intentionally excludes n-ary predicate atoms
-;; such as `($rel $x $a $b)` and nested wrapper terms.
+;; such as `($rel $x $a $b)`.  The PeTTa validation shapes with nested
+;; `(Person (var N))` subjects are handled by explicit rules below.
 (exec (surp 053 eq-scan-left-var)
     (, (eq-block-clause $partition $block ($rel (var $n) $a)))
     (, (eq-block-has-var $partition $block (var $n))))
 
 (exec (surp 053 eq-scan-right-var)
     (, (eq-block-clause $partition $block ($rel $a (var $n))))
+    (, (eq-block-has-var $partition $block (var $n))))
+
+(exec (surp 053 eq-scan-left-person-var)
+    (, (eq-block-clause $partition $block ($rel (Person (var $n)) $a)))
+    (, (eq-block-has-var $partition $block (var $n))))
+
+(exec (surp 053 eq-scan-right-person-var)
+    (, (eq-block-clause $partition $block ($rel $a (Person (var $n)))))
+    (, (eq-block-has-var $partition $block (var $n))))
+
+(exec (surp 053 eq-scan-left-and-person-var)
+    (, (eq-block-clause $partition $block ($rel (And (And (Person (var $n)) $a) $b) $c)))
+    (, (eq-block-has-var $partition $block (var $n))))
+
+(exec (surp 053 eq-scan-right-and-person-var)
+    (, (eq-block-clause $partition $block ($rel $a (And (And (Person (var $n)) $b) $c))))
     (, (eq-block-has-var $partition $block (var $n))))
 
 
