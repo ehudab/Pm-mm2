@@ -21,6 +21,7 @@ scripts/run-tests.sh tests/isurp/abstractness-sort-test.metta \
   tests/isurp/ji-prob-est-test.metta \
   tests/isurp/do-ji-prob-test.metta \
   tests/isurp/emp-prob-pbs-test.metta \
+  tests/isurp/petta-corpus-validation-test.metta \
   tests/isurp/isurp-pipeline-test.metta
 ```
 
