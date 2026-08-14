@@ -1,14 +1,14 @@
 ;; TEST-AUX src/common-utils/utils.metta
-;; TEST-AUX src/isurp_modules/00_input_bootstrap.metta
-;; TEST-AUX src/isurp_modules/01_bootstrap_partitions.metta
-;; TEST-AUX src/isurp_modules/02_block_support.metta
-;; TEST-AUX src/isurp_modules/03_abstractness_sort.metta
-;; TEST-AUX src/isurp_modules/04_eq_prob.metta
-;; TEST-AUX src/isurp_modules/05_pro_prob_wout_joint.metta
-;; TEST-AUX src/isurp_modules/06_ji_prob_est.metta
-;; TEST-AUX src/isurp_modules/07_do_ji_prob.metta
-;; TEST-AUX src/isurp_modules/08_emp_prob_pbs.metta
-;; TEST-AUX src/isurp_modules/09_isurp_new.metta
+;; TEST-AUX src/isurp-modules/input-bootstrap.metta
+;; TEST-AUX src/isurp-modules/bootstrap-partitions.metta
+;; TEST-AUX src/isurp-modules/block-support.metta
+;; TEST-AUX src/isurp-modules/abstractness-sort.metta
+;; TEST-AUX src/isurp-modules/eq-prob.metta
+;; TEST-AUX src/isurp-modules/pro-prob-wout-joint.metta
+;; TEST-AUX src/isurp-modules/ji-prob-est.metta
+;; TEST-AUX src/isurp-modules/do-ji-prob.metta
+;; TEST-AUX src/isurp-modules/emp-prob-pbs.metta
+;; TEST-AUX src/isurp-modules/isurp-new.metta
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; PeTTa corpus validation.

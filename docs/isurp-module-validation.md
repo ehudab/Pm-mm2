@@ -62,7 +62,7 @@ isurp                    = distance(empirical probability, expected interval)
 The MM2 implementation is split across small staged files under:
 
 ```text
-src/isurp_modules/
+src/isurp-modules/
 ```
 
 Each `exec` priority uses this project convention:
@@ -76,16 +76,16 @@ last field names the rule.
 
 | File                            | What it does                                                                             |
 | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `00_input_bootstrap.metta`      | Converts raw `INPUT PATTERN` into indexed pattern facts.                                 |
-| `01_bootstrap_partitions.metta` | Generates `partition`, `block`, and `ji-prob-partitions-of` facts.                       |
-| `02_block_support.metta`        | Converts indexed blocks back to query variables and counts block support.                |
-| `03_abstractness_sort.metta`    | Scores connected blocks for a joint variable and materializes the most abstract block.   |
-| `04_eq_prob.metta`              | Finds joint variables and computes PeTTa-aligned `eq-prob-of`.                           |
-| `05_pro_prob_wout_joint.metta`  | Computes independent block probability before joint correction.                          |
-| `06_ji_prob_est.metta`          | Computes `ji-prob-est-of = pro-prob-wout-joint-of * eq-prob-of`.                         |
-| `07_do_ji_prob.metta`           | Collects `ji-prob-est-of` facts into a probability list for all partitions.              |
-| `08_emp_prob_pbs.metta`         | Computes empirical probability for the validated deterministic ISurp path.               |
-| `09_isurp_new.metta`            | Builds the JI interval, distance from interval, normalization, and final `isurp-new-of`. |
+| `input-bootstrap.metta`      | Converts raw `INPUT PATTERN` into indexed pattern facts.                                 |
+| `bootstrap-partitions.metta` | Generates `partition`, `block`, and `ji-prob-partitions-of` facts.                       |
+| `block-support.metta`        | Converts indexed blocks back to query variables and counts block support.                |
+| `abstractness-sort.metta`    | Scores connected blocks for a joint variable and materializes the most abstract block.   |
+| `eq-prob.metta`              | Finds joint variables and computes PeTTa-aligned `eq-prob-of`.                           |
+| `pro-prob-wout-joint.metta`  | Computes independent block probability before joint correction.                          |
+| `ji-prob-est.metta`          | Computes `ji-prob-est-of = pro-prob-wout-joint-of * eq-prob-of`.                         |
+| `do-ji-prob.metta`           | Collects `ji-prob-est-of` facts into a probability list for all partitions.              |
+| `emp-prob-pbs.metta`         | Computes empirical probability for the validated deterministic ISurp path.               |
+| `isurp-new.metta`            | Builds the JI interval, distance from interval, normalization, and final `isurp-new-of`. |
 
 ## MM2 input contract
 
@@ -143,16 +143,16 @@ auxiliary input:
 
 ```bash
 mork run Pattern-miner-mm2/src/common-utils/utils.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/00_input_bootstrap.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/01_bootstrap_partitions.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/02_block_support.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/03_abstractness_sort.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/04_eq_prob.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/05_pro_prob_wout_joint.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/06_ji_prob_est.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/07_do_ji_prob.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/08_emp_prob_pbs.metta \
-  --aux-path Pattern-miner-mm2/src/isurp_modules/09_isurp_new.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/input-bootstrap.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/bootstrap-partitions.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/block-support.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/abstractness-sort.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/eq-prob.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/pro-prob-wout-joint.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/ji-prob-est.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/do-ji-prob.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/emp-prob-pbs.metta \
+  --aux-path Pattern-miner-mm2/src/isurp-modules/isurp-new.metta \
   --aux-path path/to/input-db.metta
 ```
 

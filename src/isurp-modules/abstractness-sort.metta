@@ -46,7 +46,7 @@
 
 
 ;; Expand block tuples into clauses.  This duplicates a small part of
-;; `04_eq_prob.metta` so the sorter can be tested independently.
+;; `eq-prob.metta` so the sorter can be tested independently.
 (exec (surp 060 abstract-expand-1)
     (, (abstractness-sort-request $partition $var)
        (block $partition ($c1)))

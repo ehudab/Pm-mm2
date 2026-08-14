@@ -28,7 +28,7 @@
 ;;       (Inheritance man (var 0))
 ;;       (Inheritance (var 0) (var 1))
 ;;
-;;   - Abstractness ordering is delegated to `03_abstractness_sort.metta`.
+;;   - Abstractness ordering is delegated to `abstractness-sort.metta`.
 ;;     That module materializes the most abstract block connected to each joint
 ;;     variable and exposes its support.
 ;;
@@ -193,7 +193,7 @@
 ;; equality correction.  If there is no earlier more-abstract block, PeTTa uses
 ;; the whole DB size as the denominator.
 ;;
-;; In this MM2 port, `03_abstractness_sort.metta` still materializes:
+;; In this MM2 port, `abstractness-sort.metta` still materializes:
 ;;
 ;;   (most-abstract-block-support $partition $var $block $count)
 ;;
