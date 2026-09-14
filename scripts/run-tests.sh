@@ -5,6 +5,48 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_ROOT="${TEST_ROOT:-$ROOT_DIR/tests}"
 OUT_DIR="${OUT_DIR:-/tmp/hyperon-miner-mm2-tests}"
 DEFAULT_MORK_BIN="$ROOT_DIR/../MORK/target/release/mork"
+TEST_CASES=()
+FLAT_OUTPUT=0
+
+usage() {
+  cat <<EOF
+Usage: $0 [--out-dir DIR] [TEST_FILE ...]
+
+Run tests and save each MORK output under DIR. Existing output files are not
+deleted, but a test rerun replaces its matching output file.
+
+Options:
+  --out-dir DIR  persistent output directory; save files directly in DIR
+  -h, --help     show this help
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --out-dir)
+      if [[ "$#" -lt 2 ]]; then
+        echo "ERROR: --out-dir requires a directory" >&2
+        exit 1
+      fi
+      OUT_DIR="$2"
+      FLAT_OUTPUT=1
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      TEST_CASES+=("$@")
+      break
+      ;;
+    *)
+      TEST_CASES+=("$1")
+      shift
+      ;;
+  esac
+done
 
 if [[ -z "${MORK_BIN:-}" ]]; then
   if command -v mork >/dev/null 2>&1; then
@@ -92,7 +134,11 @@ run_case() {
   fi
 
   rel_case="${case_file#$TEST_ROOT/}"
-  out_file="$OUT_DIR/${rel_case%.metta}.out.metta"
+  if [[ "$FLAT_OUTPUT" -eq 1 ]]; then
+    out_file="$OUT_DIR/$(basename "${case_file%.metta}.out.metta")"
+  else
+    out_file="$OUT_DIR/${rel_case%.metta}.out.metta"
+  fi
 
   total=$((total + 1))
 
@@ -143,8 +189,8 @@ run_case() {
   echo "PASS $rel_case"
 }
 
-if [[ "$#" -gt 0 ]]; then
-  for case_file in "$@"; do
+if [[ "${#TEST_CASES[@]}" -gt 0 ]]; then
+  for case_file in "${TEST_CASES[@]}"; do
     run_case "$case_file"
   done
 else
