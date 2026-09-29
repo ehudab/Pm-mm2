@@ -74,9 +74,9 @@ steps="${steps:-100000}"
 # --- No pattern: identical to the original script -----------------------
 if [[ -z "$pattern_expr" ]]; then
   if [[ -n "$out_file" ]]; then
-    "$MORK_BIN" run "$case_file" "$out_file" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+    "$MORK_BIN" run "$case_file" "$out_file" "${aux_args[@]}" --instrumentation 0
   else
-    "$MORK_BIN" run "$case_file" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+    "$MORK_BIN" run "$case_file" "${aux_args[@]}" --instrumentation 0
   fi
   exit 0
 fi
@@ -89,7 +89,7 @@ work_case_file="$tmp_dir/case_without_pattern.mm2"
 grep -v '^(EXPECTED-PATTERN ' "$case_file" > "$work_case_file"
 
 raw_out="$tmp_dir/raw_output.mm2"
-"$MORK_BIN" run "$work_case_file" "$raw_out" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+"$MORK_BIN" run "$work_case_file" "$raw_out" "${aux_args[@]}" --instrumentation 0
 
 # Anchored to the START of the line, so a fact like
 #   (iterative-candidate-pattern $a $b $d $e)

@@ -72,9 +72,9 @@ steps="${steps:-100000}"
 # --- No pattern: identical to the original script -----------------------
 if [[ -z "$pattern_expr" ]]; then
   if [[ -n "$out_file" ]]; then
-    "$MORK_BIN" run "$case_file" "$out_file" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+    "$MORK_BIN" run "$case_file" "$out_file" "${aux_args[@]}" --instrumentation 0
   else
-    "$MORK_BIN" run "$case_file" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+    "$MORK_BIN" run "$case_file" "${aux_args[@]}" --instrumentation 0
   fi
   exit 0
 fi
@@ -91,7 +91,7 @@ filter_input="$tmp_dir/filter_input.mm2"
 filtered_out="$tmp_dir/filtered_output.mm2"
 
 # Pass 1: run the case file as usual.
-"$MORK_BIN" run "$work_case_file" "$raw_out" "${aux_args[@]}" --steps "$steps" --instrumentation 0
+"$MORK_BIN" run "$work_case_file" "$raw_out" "${aux_args[@]}" --instrumentation 0
 
 # Build the filter program: raw output + your exec step, pattern
 # substituted into both slots of the nested exec.
