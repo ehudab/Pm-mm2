@@ -252,6 +252,38 @@
                     (i64_from_string $support))))))
 
 
+(exec (surp s072 abstract-block-rank)
+    (, 
+        (abstract-block-score $pattern $partition $var $block-1 $score-1)
+        (abstract-block-score $pattern $partition $var $block-2 $score-2))
+    (O
+        (pure
+            (is-more-abstract $partition $score-1 $score-2 $is-gt)
+            $is-gt
+            (lt_f32 (f32_from_string $score-1) (f32_from_string $score-2))
+        )
+        (+ (rank $pattern $partition $var $block-1 0))
+    )
+)
+
+(exec (surp s073 abstract-block-rank)
+    (, (abstract-block-score $pattern $partition $var $block-1 $score-1) 
+        (abstract-block-score $pattern $partition $var $block-2 $score-2)
+        (is-more-abstract $partition $score-1 $score-2 true)
+        (rank $pattern $partition $var $block-1 0))
+    (O
+        (count
+            (rank $pattern $partition $var $block-1 $count)
+            $count
+            $score-2
+        )
+        (- (rank $pattern $partition $var $block-1 0))
+    )
+)
+(exec (surp s074 abstract-block-rank)
+    (, (is-more-abstract $partition $score-1 $score-2 $bool)) (O (- (is-more-abstract $partition $score-1 $score-2 $bool))))
+
+
 (exec (surp s072 abstract-best-start)
     (, (abstractness-sort-request $pattern $partition $var)
        (DEF abstract-best-step $step-p $step-t))

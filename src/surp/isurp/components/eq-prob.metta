@@ -184,6 +184,16 @@
             (indices_to_vars
                 (cons , (' $block))))))
 
+(exec (surp s083 eq-value-count)
+    (, (eq-value-query $pattern $partition $block $var $query))
+    (,
+        (exec (surp 056 eq-value-count)
+            $query
+            (O
+                (count
+                    (eq-value-count $pattern $partition $block $var $count)
+                    $count
+                    $query)))))
 
 ;; value-count, part 2:
 ;;
