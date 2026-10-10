@@ -100,8 +100,8 @@
 
 (DEF ce-schedule-cycle-fn
   (, (ce-support-cycle $size $candidate)
-     (DEF ce-schedule-filter-fn $filter-p $filter-t)
-     (DEF ce-schedule-depth-fn $depth-p $depth-t)
+     (DEF ce-support-pass-fn $filter-p $filter-t)
+     (DEF ce-expand-pass-fn $depth-p $depth-t)
      (DEF ce-build-fn $build-p $build-t)
      (DEF ce-schedule-candidate-fn $candidate-p $candidate-t))
   (O
@@ -112,63 +112,33 @@
     (- (ce-support-cycle $size $candidate))))
 
 ;; Support filtering.
-(DEF ce-schedule-filter-fn
-  (, (ce-support $size $candidate $support)
-     (DEF ce-support-pass-fn $pass-p $pass-t)
-     (DEF ce-save-pass-fn $save-p $save-t)
-     ((drop-matched
-        (ce-support-pass (ce-candidate $size $candidate) $support false)
-        -> removed)
-      $drop-p $drop-t))
-  (O
-    (+ (exec (freq f130 check-support) $pass-p $pass-t))
-    (+ (exec (freq f140 save-frequent) $save-p $save-t))
-    (+ (exec (freq f141 drop-infrequent) $drop-p $drop-t))))
 
 (DEF ce-support-pass-fn
   (, (ce-support $size $candidate $support)
-     (INPUT MIN-SUPPORT $threshold)
-     ((support-at-least
-        (ce-candidate $size $candidate) $support $threshold -> ce-support-pass)
-       $pass-p $pass-t))
+     (INPUT MIN-SUPPORT $threshold))
   (O
-    (+ (support-at-least-request
-      (ce-candidate $size $candidate) $support $threshold ce-support-pass))
-    (+ (exec (freq f131 evaluate-support) $pass-p $pass-t))
-    (- (ce-support $size $candidate $support))))
-
-(DEF ce-save-pass-fn
-  (, (ce-support-pass (ce-candidate $size $candidate) $support true))
-  (O
+    (pure
+      ($head $size $candidate)
+      $head
+      (ifnz (u8_from_bool (ge_i32
+        (i32_from_string $support)
+        (i32_from_string $threshold))) then ce-expand-check)
+    )
     (+ (exec (freq f145 publish-final-conjunct)
-      (, (INPUT MAX-SIZE $size))
-      (, (expanded-conjunct $size $candidate $support))))
-    (+ (ce-expand-check $size $candidate))
-    (- (ce-support-pass (ce-candidate $size $candidate) $support true))))
+        (, (INPUT MAX-SIZE $size))
+        (, (expanded-conjunct $size $candidate $support))))
+    (- (ce-support $size $candidate $support))))
+              
 
 ;; Only frequent candidates below MAX-SIZE are expanded.
-(DEF ce-schedule-depth-fn
-  (, (ce-expand-check $size $candidate)
-     (DEF ce-expand-pass-fn $pass-p $pass-t)
-     ((replace-matched
-        (ce-expand-pass $size $candidate true)
-        (ce-expand-todo $size $candidate) -> replaced)
-      $todo-p $todo-t)
-     ((drop-matched (ce-expand-pass $size $candidate false) -> removed)
-      $drop-p $drop-t))
-  (O
-    (+ (exec (freq f210 check-depth) $pass-p $pass-t))
-    (+ (exec (freq f220 queue-expansion) $todo-p $todo-t))
-    (+ (exec (freq f221 stop-expansion) $drop-p $drop-t))))
-
 (DEF ce-expand-pass-fn
   (, (ce-expand-check $size $candidate)
      (INPUT MAX-SIZE $max-size))
   (O
     (pure
-      (ce-expand-pass $size $candidate $pass)
-      $pass
-      (lt_i32 (i32_from_string $size) (i32_from_string $max-size)))
+      ($head $size $candidate)
+      $head
+      (ifnz (u8_from_bool (lt_i32 (i32_from_string $size) (i32_from_string $max-size))) then ce-expand-todo))
     (- (ce-expand-check $size $candidate))))
 
 ;; Candidate construction is split into small schedulers because inlining all
@@ -425,10 +395,7 @@
         $old-size $candidate -> ce-candidate-size)
       $size-p $size-t)
      (DEF ce-schedule-abstract-check-fn $abstract-p $abstract-t)
-     (DEF ce-candidate-pass-fn $pass-p $pass-t)
-     (DEF ce-queue-candidate-fn $queue-p $queue-t)
-     ((drop-matched (ce-candidate-pass $candidate $size false) -> removed)
-      $drop-p $drop-t))
+     (DEF ce-candidate-pass-fn $pass-p $pass-t))
   (O
     (+ (exec (freq f501 canonicalize-candidate) $canonical-p $canonical-t))
     (+ (exec (freq f510 candidate-size) $size-p $size-t))
@@ -554,23 +521,17 @@
 
 (DEF ce-candidate-pass-fn
   (, (ce-candidate-size $old-size $candidate $size)
-     (INPUT MAX-SIZE $max-size))
-  (O
-    (pure
-      (ce-candidate-pass $candidate $size $pass)
-      $pass
-      (and_bool
-        (le_i32 (i32_from_string $size) (i32_from_string $max-size))
-        (gt_i32 (i32_from_string $size) (i32_from_string $old-size))))
-    (- (ce-candidate-size $old-size $candidate $size))))
-
-(DEF ce-queue-candidate-fn
-  (, (ce-candidate-pass $candidate $size true)
+     (INPUT MAX-SIZE $max-size)
      (DEF ce-support-fn $support-p $support-t))
   (O
-    (+ (ce-pending $size $candidate))
-    (+ (exec (freq f100 support-cycle) $support-p $support-t))
-    (- (ce-candidate-pass $candidate $size true))))
+    (pure
+      ($head $size $candidate)
+      $head
+      (ifnz (u8_from_bool (and_bool
+        (le_i32 (i32_from_string $size) (i32_from_string $max-size))
+        (gt_i32 (i32_from_string $size) (i32_from_string $old-size)))) then ce-pending))
+    (- (ce-candidate-size $old-size $candidate $size))
+    (+ (exec (freq f100 support-cycle) $support-p $support-t))))
 
 ;; Normalize all seed patterns before starting the first support cycle.
 (exec (freq f010 normalize-seeds)

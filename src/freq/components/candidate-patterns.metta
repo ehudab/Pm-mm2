@@ -843,21 +843,15 @@ Failed to create stream fd: Operation not permitted
   (O (count (specialization-prefix-support $id $rest $prefix $support)
        $support $fact)))
 
-(DEF specialization-prefix-check-fn
+(DEF specialization-prefix-check-accept-fn
   (, (specialization-prefix-support $id $rest $prefix $support)
-     (INPUT MIN-SUPPORT $min))
-  (O
-    (- (specialization-prefix-support $id $rest $prefix $support))
-    (pure (specialization-prefix-decision $id $rest $prefix $passes) $passes
-      (le_f64 (f64_from_string $min) (f64_from_string $support)))))
-
-(DEF specialization-prefix-accept-fn
-  (, (specialization-prefix-decision $id $rest $prefix true)
+     (INPUT MIN-SUPPORT $min)
      (DEF specialization-extend $extend-p $extend-t))
   (O
-    (- (specialization-prefix-decision $id $rest $prefix true))
     (- (specialization-wait $id $rest $prefix))
-    (+ (specialization-partial $id $rest $prefix))
+    (- (specialization-prefix-support $id $rest $prefix $support))
+    (pure ($head $id $rest $prefix) $head
+      (ifnz (u8_from_bool (le_f64 (f64_from_string $min) (f64_from_string $support))) then specialization-partial))
     (+ (exec (freq f510 specialization-extend) $extend-p $extend-t))))
 
 ; Scheduled after accept. Zero-match prefixes have no count result and are
@@ -872,8 +866,7 @@ Failed to create stream fd: Operation not permitted
      (DEF specialization-prefix-restore-fn $restore-p $restore-t)
      (DEF specialization-prefix-match-fn $match-p $match-t)
      (DEF specialization-prefix-count-fn $count-p $count-t)
-     (DEF specialization-prefix-check-fn $check-p $check-t)
-     (DEF specialization-prefix-accept-fn $accept-p $accept-t)
+     (DEF specialization-prefix-check-accept-fn $check-p $check-t)
      (DEF specialization-prefix-drop-fn $drop-p $drop-t))
   (O
     (+ (exec (freq f516 specialization-exhaustive-proposal) $all-p $all-t))
@@ -881,8 +874,7 @@ Failed to create stream fd: Operation not permitted
     (+ (exec (freq f517 specialization-prefix-restore) $restore-p $restore-t))
     (+ (exec (freq f518 specialization-prefix-match) $match-p $match-t))
     (+ (exec (freq f519 specialization-prefix-count) $count-p $count-t))
-    (+ (exec (freq f520 specialization-prefix-check) $check-p $check-t))
-    (+ (exec (freq f521 specialization-prefix-accept) $accept-p $accept-t))
+    (+ (exec (freq f520 specialization-prefix-check-accept) $check-p $check-t))
     (+ (exec (freq f522 specialization-prefix-drop) $drop-p $drop-t))))
 
 (DEF specialization-pruning-cleanup-fn
