@@ -163,35 +163,33 @@
                     (f64_from_string $total-count))))))
 
 ;; Current partition shapes have either two or three blocks.
-(exec (surp s110 product-2)
-    (, (partition $ctx ($b1 $b2))
-       (block-prob $ctx ($b1 $b2) $b1 $p1)
-       (block-prob $ctx ($b1 $b2) $b2 $p2))
-    (O
+(exec (surp s110 product-init)
+    (, (partition $ctx $blks))
+    (, (partition-product $ctx $blks 1))
+)
+(exec (surp s111 product)
+    (, (partition $ctx $indexed-partition)  (partition-product $ctx $indexed-partition $product)
+        (exec (surp s111 product) $src (O (pure $out $var (car $q))))
+    )
+    (O 
         (pure
-            (partition-product $ctx ($b1 $b2) $product)
-            $product
-            (f64_to_string
-                (product_f64
-                    (f64_from_string $p1)
-                    (f64_from_string $p2))))))
-
-(exec (surp s111 product-3)
-    (, (partition $ctx ($b1 $b2 $b3))
-       (block-prob $ctx ($b1 $b2 $b3) $b1 $p1)
-       (block-prob $ctx ($b1 $b2 $b3) $b2 $p2)
-       (block-prob $ctx ($b1 $b2 $b3) $b3 $p3))
-    (O
-        (pure
-            (partition-product $ctx ($b1 $b2 $b3) $product)
-            $product
-            (f64_to_string
-                (product_f64
-                    (product_f64
-                        (f64_from_string $p1)
-                        (f64_from_string $p2))
-                    (f64_from_string $p3))))))
-
+            (exec (surp s111 product)
+                (, (block-prob $ctx $indexed-partition $block $prob))
+                (O  
+                    (pure
+                        (partition-product $ctx $indexed-partition $new-product)
+                        $new-product
+                        (f64_to_string (product_f64 (f64_from_string $prob) (f64_from_string $product)))
+                    )
+                    (- (partition-product $ctx $indexed-partition $product))
+                    (+ (exec (surp s111 product) $src (O (pure $out $var (car (cdr $q))))))
+                )
+            )
+            $block
+            (car (' $indexed-partition))
+        )
+    )
+)
 ;; Take [min, max] over the current three-conjunct partition products.
 (exec (surp s120 interval-bounds)
     (, (indexed-pattern $ctx ($c1 $c2 $c3))
@@ -329,7 +327,6 @@
         (cleanup $ctx (partition $ctx $partition))
         (cleanup $ctx (block-support $ctx $partition $block $support))
         (cleanup $ctx (block-prob $ctx $partition $block $prob))
-        (cleanup $ctx (partition-product $ctx $partition $product))
         (cleanup $ctx (min-partition-product $ctx $min))
         (cleanup $ctx (max-partition-product $ctx $max))
         (cleanup $ctx (partition-product-range $ctx $min $max))
