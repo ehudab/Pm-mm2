@@ -885,7 +885,6 @@ Failed to create stream fd: Operation not permitted
     (+ (cleanup (specialization-matches $id $prefix $fact)))
     (+ (cleanup (specialization-prefix-query $id $before $prefix $query)))
     (+ (cleanup (specialization-prefix-support $id $rest $prefix $support)))
-    (+ (cleanup (specialization-prefix-decision $id $rest $prefix $passes)))
     (+ (cleanup (specialization-wait $id $rest $prefix)))))
 
 ; specialization cross-product smoke
