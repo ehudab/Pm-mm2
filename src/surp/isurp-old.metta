@@ -192,20 +192,23 @@
 )
 ;; Take [min, max] over the current three-conjunct partition products.
 (exec (surp s120 interval-bounds)
-    (, (indexed-pattern $ctx ($c1 $c2 $c3))
-       (partition-product $ctx (($c1) ($c2 $c3)) $p1)
-       (partition-product $ctx (($c1 $c3) ($c2)) $p2)
-       (partition-product $ctx (($c1 $c2) ($c3)) $p3)
-       (partition-product $ctx (($c1) ($c2) ($c3)) $p4))
+    (,
+        (indexed-pattern $ctx $indexed-pattern)
+        (partition $ctx $indexed-partition)
+        (partition-product $ctx $indexed-partition $product))
     (O
-        (pure
-            (min-partition-product $ctx $min)
-            $min
-            (min-atom (' ($p1 $p2 $p3 $p4))))
-        (pure
+        (fmax 
             (max-partition-product $ctx $max)
             $max
-            (max-atom (' ($p1 $p2 $p3 $p4))))))
+            $product
+        )
+        (fmin
+            (min-partition-product $ctx $min)
+            $min
+            $product
+        )
+    )
+)
 
 (exec (surp s130 interval-range)
     (, (min-partition-product $ctx $min)
