@@ -125,7 +125,7 @@
         (i32_from_string $threshold))) then ce-expand-check)
     )
     (+ (exec (freq f145 publish-final-conjunct)
-        (, (INPUT MAX-SIZE $size))
+        (, (INPUT MAX-SIZE $size) (ce-expand-check $size $candidate))
         (, (expanded-conjunct $size $candidate $support))))
     (- (ce-support $size $candidate $support))))
               
