@@ -740,40 +740,16 @@ Failed to create stream fd: Operation not permitted
 ;; evaluator's input cursor correctly.
 (DEF sp-fill-start-fn
   (, (sp-input $key $template $values) (sp-total $template $total)
-     (sp-used $key $used) (sp-length $key $length)
-     (DEF sp-fill-validate-fn $vp $vt))
+     (sp-used $key $used) (sp-length $key $length))
   (O
     (- (sp-input $key $template $values)) (- (sp-used $key $used))
     (- (sp-length $key $length))
-    (pure (sp-valid $key $template $values $total $used $valid) $valid
-      (le_f64 (f64_from_string $length) (f64_from_string $total)))
-    (pure (sp-limit $key $supported) $supported
-      (le_f64 (f64_from_string $total) (f64_from_string 63)))
-    (+ (exec (freq f516 p31) $vp $vt))))
-
-(DEF sp-fill-validate-fn
-  (, (DEF sp-fill-fn $fp $ft))
-  (O
-    (+ (exec (freq f516 p32)
-      (, (sp-valid $ok-key $ok-template $ok-values $ok-total $ok-used true)
-         (sp-limit $ok-key true))
-      (O (- (sp-valid $ok-key $ok-template $ok-values $ok-total $ok-used true))
-         (- (sp-limit $ok-key true))
-         (+ (sp-template $ok-key $ok-template))
-         (+ (sp-fill $ok-key $ok-values $ok-total $ok-used 0))
-         (+ (exec (freq f516 p40) $fp $ft)))))
-    (+ (exec (freq f516 p33)
-      (, (sp-valid $bad-key $bad-template $bad-values $bad-total $bad-used false)
-         (sp-limit $bad-key true))
-      (O (- (sp-valid $bad-key $bad-template $bad-values $bad-total $bad-used false))
-         (- (sp-limit $bad-key true))
-         (+ (specialization-prefix-error $bad-key too-many-values)))))
-    (+ (exec (freq f516 p34)
-      (, (sp-valid $wide-key $wide-template $wide-values $wide-total $wide-used $valid)
-         (sp-limit $wide-key false))
-      (O (- (sp-valid $wide-key $wide-template $wide-values $wide-total $wide-used $valid))
-         (- (sp-limit $wide-key false))
-         (+ (specialization-prefix-error $wide-key too-many-occurrences)))))))
+    (pure (exec (freq f516 p32) (, (DEF sp-fill-fn $fp $ft)) (, (exec (freq f516 p40) $fp $ft) (sp-fill $key $values $total $used 0) ($head $key $template))) $head
+      (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (le_f64 (f64_from_string $length) (f64_from_string $total)))) then sp-template))
+     (pure (specialization-prefix-error $key $tail) $tail
+      (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (gt_f64 (f64_from_string $length) (f64_from_string $total)))) then too-many-values))
+    (pure (specialization-prefix-error $key $tail) $tail
+       (ifnz (u8_from_bool (gt_f64 (f64_from_string $total) (f64_from_string 63))) then too-many-occurrences))))
 
 (DEF sp-fill-fn
   (, (sp-fill $key $values $total $used $cursor)
