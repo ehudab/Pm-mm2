@@ -48,7 +48,17 @@ while IFS= read -r aux_path || [[ -n "$aux_path" ]]; do
   if [[ "$aux_path" != /* ]]; then
     aux_path="$ROOT_DIR/$aux_path"
   fi
-  aux_args+=("--aux-path" "$aux_path")
+
+  if [[ -f "$aux_path" ]]; then
+    aux_args+=("--aux-path" "$aux_path")
+  elif [[ -d "$aux_path" ]]; then
+    while IFS= read -r -d '' aux_file; do
+      aux_args+=("--aux-path" "$aux_file")
+    done < <(find "$aux_path" -type f -print0 | sort -z)
+  else
+    echo "ERROR: TEST-AUX path does not exist or is not a file/directory: $aux_path" >&2
+    exit 1
+  fi
 done < <(sed -n 's/^;; TEST-AUX[[:space:]]\{1,\}//p' "$case_file")
 
 steps="$(read_test_value TEST-STEPS)"
