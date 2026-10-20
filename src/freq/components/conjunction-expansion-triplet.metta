@@ -115,19 +115,22 @@
 
 (DEF ce-support-pass-fn
   (, (ce-support $size $candidate $support)
-     (INPUT MIN-SUPPORT $threshold))
+     (INPUT MIN-SUPPORT $threshold)
+     (DEF ce-publish-final-fn $publish-p $publish-t))
   (O
-    (pure
-      ($head $size $candidate)
-      $head
-      (ifnz (u8_from_bool (ge_i32
-        (i32_from_string $support)
-        (i32_from_string $threshold))) then ce-expand-check)
-    )
-    (+ (exec (freq f145 publish-final-conjunct)
-        (, (INPUT MAX-SIZE $size) (ce-expand-check $size $candidate))
-        (, (expanded-conjunct $size $candidate $support))))
+    (pure ($head $size $candidate $support) $head
+      (ifnz (u8_from_bool (ge_i32 (i32_from_string $support)
+                                  (i32_from_string $threshold)))
+            then ce-frequent))
+    (+ (exec (freq f145 publish-final-conjunct) $publish-p $publish-t))
     (- (ce-support $size $candidate $support))))
+
+;; One exec for all candidates. (INPUT MAX-SIZE $size) pins $size to MAX-SIZE,
+;; so only max-size frequent candidates are published, as in main.
+(DEF ce-publish-final-fn
+  (, (INPUT MAX-SIZE $size)
+     (ce-frequent $size $candidate $support))
+  (O (+ (expanded-conjunct $size $candidate $support))))
               
 
 ;; Only frequent candidates below MAX-SIZE are expanded.
@@ -400,9 +403,7 @@
     (+ (exec (freq f501 canonicalize-candidate) $canonical-p $canonical-t))
     (+ (exec (freq f510 candidate-size) $size-p $size-t))
     (+ (exec (freq f511 schedule-abstract-check) $abstract-p $abstract-t))
-    (+ (exec (freq f520 check-candidate) $pass-p $pass-t))
-    (+ (exec (freq f530 queue-candidate) $queue-p $queue-t))
-    (+ (exec (freq f531 drop-candidate) $drop-p $drop-t))))
+    (+ (exec (freq f520 check-candidate) $pass-p $pass-t))))
 
 ;; A variable-only clause is redundant when its left variable is covered by
 ;; another clause with the same predicate and left variable, and its right
