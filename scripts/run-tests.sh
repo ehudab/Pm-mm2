@@ -45,18 +45,32 @@ read_test_value() {
   printf '%s' "${line#;; ${key} }"
 }
 
+
 append_aux_paths() {
   local case_file="$1"
   local aux_path
+  local file
 
   while IFS= read -r aux_path || [[ -n "$aux_path" ]]; do
     [[ -z "$aux_path" ]] && continue
+
     if [[ "$aux_path" != /* ]]; then
       aux_path="$ROOT_DIR/$aux_path"
     fi
-    aux_args+=("--aux-path" "$aux_path")
+
+    if [[ -d "$aux_path" ]]; then
+      # Include immediate files only; do not recurse.
+      while IFS= read -r -d '' file; do
+        aux_args+=("--aux-path" "$file")
+      done < <(find "$aux_path" -maxdepth 1 -type f -print0 | sort -z)
+    elif [[ -f "$aux_path" ]]; then
+      aux_args+=("--aux-path" "$aux_path")
+    else
+      echo "WARNING: TEST-AUX path does not exist: $aux_path" >&2
+    fi
   done < <(sed -n 's/^;; TEST-AUX[[:space:]]\{1,\}//p' "$case_file")
 }
+
 
 expected_results() {
   local case_file="$1"
