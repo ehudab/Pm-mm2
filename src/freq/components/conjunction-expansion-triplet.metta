@@ -121,28 +121,24 @@
     (pure ($head $size $candidate $support) $head
       (ifnz (u8_from_bool (ge_i32 (i32_from_string $support)
                                   (i32_from_string $threshold)))
-            then ce-frequent))
+            then ce-expand-check))
     (+ (exec (freq f145 publish-final-conjunct) $publish-p $publish-t))
     (- (ce-support $size $candidate $support))))
 
-;; One exec for all candidates. (INPUT MAX-SIZE $size) pins $size to MAX-SIZE,
-;; so only max-size frequent candidates are published, as in main.
 (DEF ce-publish-final-fn
   (, (INPUT MAX-SIZE $size)
-     (ce-frequent $size $candidate $support))
+     (ce-expand-check $size $candidate $support))
   (O (+ (expanded-conjunct $size $candidate $support))))
-              
 
-;; Only frequent candidates below MAX-SIZE are expanded.
 (DEF ce-expand-pass-fn
-  (, (ce-expand-check $size $candidate)
+  (, (ce-expand-check $size $candidate $support)
      (INPUT MAX-SIZE $max-size))
   (O
-    (pure
-      ($head $size $candidate)
-      $head
-      (ifnz (u8_from_bool (lt_i32 (i32_from_string $size) (i32_from_string $max-size))) then ce-expand-todo))
-    (- (ce-expand-check $size $candidate))))
+    (pure ($head $size $candidate) $head
+      (ifnz (u8_from_bool (lt_i32 (i32_from_string $size)
+                                  (i32_from_string $max-size)))
+            then ce-expand-todo))
+    (- (ce-expand-check $size $candidate $support))))
 
 ;; Candidate construction is split into small schedulers because inlining all
 ;; DEF bodies into one rule exceeds MORK's variable limit.
