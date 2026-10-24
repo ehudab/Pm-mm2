@@ -750,11 +750,11 @@ Failed to create stream fd: Operation not permitted
         (sp-fill-status $key $status)
         $status
         (ifnz (u8_from_bool
-                (gt_f64 $total-number (f64_from_string 63)))
+                (gt_f64 $total (f64_from_string 63)))
           then too-many-occurrences
           else
             (ifnz (u8_from_bool
-                    (gt_f64 $length-number $total-number))
+                    (gt_f64 $length $total))
               then too-many-values
               else valid)))))
 
