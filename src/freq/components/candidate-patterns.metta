@@ -744,17 +744,21 @@ Failed to create stream fd: Operation not permitted
   (O
     (- (sp-input $key $template $values)) (- (sp-used $key $used))
     (- (sp-length $key $length))
-    (pure (exec (freq f516 p32) (, (DEF sp-fill-fn $fp $ft)) (, (exec (freq f516 p40) $fp $ft) (sp-fill $key $values $total $used 0) ($head $key $template))) $head
-      (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (le_f64 (f64_from_string $length) (f64_from_string $total)))) then sp-template))
+    (pure 
+        (exec (freq f516 p32) 
+          (, (DEF sp-fill-fn $fp $ft)) 
+          (, (exec (freq f516 p40) $fp $ft) (sp-fill $key $values $total $used 0) ($head $key $template))) 
+        $head
+        (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (le_f64 (f64_from_string $length) (f64_from_string $total)))) then sp-template))
      (pure
-        (sp-fill-status $key $status)
+        (specialization-prefix-error $key $status)
         $status
         (ifnz (u8_from_bool
-                (gt_f64 $total (f64_from_string 63)))
+                (gt_f64 (f64_from_string $total) (f64_from_string 63)))
           then too-many-occurrences
           else
             (ifnz (u8_from_bool
-                    (gt_f64 $length $total))
+                    (gt_f64 (f64_from_string $length) (f64_from_string $total)))
               then too-many-values
               else valid)))))
 
