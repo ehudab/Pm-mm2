@@ -759,8 +759,7 @@ Failed to create stream fd: Operation not permitted
           else
             (ifnz (u8_from_bool
                     (gt_f64 (f64_from_string $length) (f64_from_string $total)))
-              then too-many-values
-              else valid)))))
+              then too-many-values)))))
 
 (DEF sp-fill-fn
   (, (sp-fill $key $values $total $used $cursor)
