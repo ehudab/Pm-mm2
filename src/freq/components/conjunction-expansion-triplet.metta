@@ -521,8 +521,7 @@
 
 (DEF ce-candidate-pass-fn
   (, (ce-candidate-size $old-size $candidate $size)
-     (INPUT MAX-SIZE $max-size)
-     (DEF ce-support-fn $support-p $support-t))
+     (INPUT MAX-SIZE $max-size))
   (O
     (pure
       ($head $size $candidate)
@@ -530,8 +529,7 @@
       (ifnz (u8_from_bool (and_bool
         (le_i32 (i32_from_string $size) (i32_from_string $max-size))
         (gt_i32 (i32_from_string $size) (i32_from_string $old-size)))) then ce-pending))
-    (- (ce-candidate-size $old-size $candidate $size))
-    (+ (exec (freq f100 support-cycle) $support-p $support-t))))
+    (- (ce-candidate-size $old-size $candidate $size))))
 
 (DEF ce-queue-candidate-fn
   (, (ce-pending $size $candidate)
