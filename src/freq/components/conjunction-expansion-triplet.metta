@@ -116,28 +116,29 @@
 (DEF ce-support-pass-fn
   (, (ce-support $size $candidate $support)
      (INPUT MIN-SUPPORT $threshold)
-     (DEF ce-publish-final-fn $publish-p $publish-t))
-  (O
-    (pure ($head $size $candidate $support) $head
-      (ifnz (u8_from_bool (ge_i32 (i32_from_string $support)
-                                  (i32_from_string $threshold)))
-            then ce-expand-check))
-    (+ (exec (freq f145 publish-final-conjunct) $publish-p $publish-t))
-    (- (ce-support $size $candidate $support))))
-
-(DEF ce-publish-final-fn
-  (, (INPUT MAX-SIZE $size)
-     (ce-expand-check $size $candidate $support))
-  (O (+ (expanded-conjunct $size $candidate $support))))
-
-(DEF ce-expand-pass-fn
-  (, (ce-expand-check $size $candidate $support)
      (INPUT MAX-SIZE $max-size))
   (O
-    (pure ($head $size $candidate) $head
-      (ifnz (u8_from_bool (lt_i32 (i32_from_string $size)
-                                  (i32_from_string $max-size)))
-            then ce-expand-todo))
+    (pure
+      ($head $size $candidate $support)
+      $head
+      (ifnz
+        (u8_from_bool
+          (ge_i32 (i32_from_string $support)
+                  (i32_from_string $threshold)))
+        then
+          (ifnz
+            (u8_from_bool
+              (eq_i32 (i32_from_string $size)
+                      (i32_from_string $max-size)))
+            then expanded-conjunct
+            else ce-expand-check)))
+    (- (ce-support $size $candidate $support))
+  )
+)
+(DEF ce-expand-pass-fn
+  (, (ce-expand-check $size $candidate $support))
+  (O
+    (+ (ce-expand-todo $size $candidate))
     (- (ce-expand-check $size $candidate $support))))
 
 ;; Candidate construction is split into small schedulers because inlining all
@@ -394,12 +395,14 @@
         $old-size $candidate -> ce-candidate-size)
       $size-p $size-t)
      (DEF ce-schedule-abstract-check-fn $abstract-p $abstract-t)
-     (DEF ce-candidate-pass-fn $pass-p $pass-t))
+     (DEF ce-candidate-pass-fn $pass-p $pass-t)
+     (DEF ce-queue-candidate-fn $queue-p $queue-t))
   (O
     (+ (exec (freq f501 canonicalize-candidate) $canonical-p $canonical-t))
     (+ (exec (freq f510 candidate-size) $size-p $size-t))
     (+ (exec (freq f511 schedule-abstract-check) $abstract-p $abstract-t))
-    (+ (exec (freq f520 check-candidate) $pass-p $pass-t))))
+    (+ (exec (freq f520 check-candidate) $pass-p $pass-t))
+    (+ (exec (freq f530 queue-candidate) $queue-p $queue-t))))
 
 ;; A variable-only clause is redundant when its left variable is covered by
 ;; another clause with the same predicate and left variable, and its right
@@ -530,6 +533,12 @@
     (- (ce-candidate-size $old-size $candidate $size))
     (+ (exec (freq f100 support-cycle) $support-p $support-t))))
 
+(DEF ce-queue-candidate-fn
+  (, (ce-pending $size $candidate)
+     (DEF ce-support-fn $support-p $support-t))
+  (O
+    (+ (exec (freq f100 support-cycle)
+             $support-p $support-t))))
 ;; Normalize all seed patterns before starting the first support cycle.
 (exec (freq f010 normalize-seeds)
   (, (pattern 0 $pattern))

@@ -746,10 +746,17 @@ Failed to create stream fd: Operation not permitted
     (- (sp-length $key $length))
     (pure (exec (freq f516 p32) (, (DEF sp-fill-fn $fp $ft)) (, (exec (freq f516 p40) $fp $ft) (sp-fill $key $values $total $used 0) ($head $key $template))) $head
       (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (le_f64 (f64_from_string $length) (f64_from_string $total)))) then sp-template))
-     (pure (specialization-prefix-error $key $tail) $tail
-      (ifnz (u8_from_bool (and_bool (le_f64 (f64_from_string $total) (f64_from_string 63)) (gt_f64 (f64_from_string $length) (f64_from_string $total)))) then too-many-values))
-    (pure (specialization-prefix-error $key $tail) $tail
-       (ifnz (u8_from_bool (gt_f64 (f64_from_string $total) (f64_from_string 63))) then too-many-occurrences))))
+     (pure
+        (sp-fill-status $key $status)
+        $status
+        (ifnz (u8_from_bool
+                (gt_f64 $total-number (f64_from_string 63)))
+          then too-many-occurrences
+          else
+            (ifnz (u8_from_bool
+                    (gt_f64 $length-number $total-number))
+              then too-many-values
+              else valid)))))
 
 (DEF sp-fill-fn
   (, (sp-fill $key $values $total $used $cursor)
@@ -828,7 +835,8 @@ Failed to create stream fd: Operation not permitted
     (- (specialization-prefix-support $id $rest $prefix $support))
     (pure ($head $id $rest $prefix) $head
       (ifnz (u8_from_bool (le_f64 (f64_from_string $min) (f64_from_string $support))) then specialization-partial))
-    (+ (exec (freq f510 specialization-extend) $extend-p $extend-t))))
+    (pure (exec (freq f510 $name) $extend-p $extend-t) $name
+      (ifnz (u8_from_bool (le_f64 (f64_from_string $min) (f64_from_string $support))) then specialization-extend))))
 
 ; Scheduled after accept. Zero-match prefixes have no count result and are
 ; dropped here too. The public support counter likewise publishes only matches.
